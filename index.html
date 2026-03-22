@@ -1,205 +1,992 @@
-<style><!-- Forçar novo deploy -->
-    :root {
-        --primary-green: #0B4F2F;
-        --gold: #C6A03E;
-        --light-gold: rgba(198, 160, 62, 0.1);
-        --bg-light: #f4f7f6;
-        --text-dark: #333;
-        --white: #ffffff;
-        --transition: all 0.3s ease;
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>V-Gest | Videira's Assessoria</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        :root {
+            --primary: #0B4F2F;
+            --gold: #C6A03E;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text: #1e293b;
+            --text-light: #64748b;
+            --border: #e2e8f0;
+            --shadow: 0 1px 3px rgba(0,0,0,0.1);
+            --danger: #dc2626;
+            --success: #10b981;
+            --warning: #f59e0b;
+        }
+
+        .dark {
+            --bg: #0f172a;
+            --card: #1e293b;
+            --text: #f1f5f9;
+            --text-light: #94a3b8;
+            --border: #334155;
+        }
+
+        body { background: var(--bg); color: var(--text); transition: background 0.2s; }
+        .app { display: flex; min-height: 100vh; }
+
+        .sidebar {
+            width: 280px;
+            background: var(--primary);
+            color: white;
+            position: fixed;
+            height: 100vh;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+            overflow-y: auto;
+        }
+        .sidebar.open { transform: translateX(0); }
+
+        .sidebar-header {
+            padding: 24px 20px;
+            text-align: center;
+            border-bottom: 1px solid var(--gold);
+        }
+        .sidebar-header .logo { font-size: 2.5rem; }
+        .sidebar-header h2 { font-size: 1.2rem; margin-top: 8px; }
+
+        .sidebar-nav { padding: 20px; }
+        .sidebar-nav button {
+            width: 100%;
+            text-align: left;
+            padding: 12px 16px;
+            margin: 4px 0;
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 0.95rem;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .sidebar-nav button:hover { background: rgba(255,255,255,0.15); }
+        .sidebar-nav button.active { background: var(--gold); color: var(--primary); font-weight: 600; }
+
+        .badge {
+            background: var(--danger);
+            color: white;
+            border-radius: 20px;
+            padding: 2px 8px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            min-width: 22px;
+            text-align: center;
+        }
+
+        .main { flex: 1; margin-left: 0; padding: 20px; width: 100%; }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            gap: 12px;
+            background: var(--card);
+            padding: 12px 20px;
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+        }
+        .menu-btn {
+            background: var(--gold);
+            border: none;
+            font-size: 1.5rem;
+            padding: 8px 16px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: bold;
+            color: var(--primary);
+        }
+        .datetime {
+            font-size: 0.85rem;
+            background: var(--bg);
+            padding: 6px 12px;
+            border-radius: 30px;
+            color: var(--text);
+        }
+        .header-actions { display: flex; gap: 12px; }
+        .icon-btn {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            padding: 8px 16px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            color: var(--text);
+        }
+
+        .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 32px; }
+        .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 32px; }
+        .card {
+            background: var(--card);
+            padding: 20px;
+            border-radius: 20px;
+            border-left: 4px solid var(--gold);
+            box-shadow: var(--shadow);
+        }
+        .card h3 { font-size: 0.85rem; color: var(--text-light); margin-bottom: 8px; }
+        .card .value { font-size: 1.8rem; font-weight: bold; }
+
+        .btn-primary {
+            background: var(--gold);
+            color: var(--primary);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 40px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 0.9rem;
+            margin: 4px;
+        }
+        .btn-secondary {
+            background: var(--card);
+            border: 1px solid var(--border);
+            padding: 10px 20px;
+            border-radius: 40px;
+            cursor: pointer;
+            margin: 4px;
+        }
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        .form-group { margin-bottom: 16px; position: relative; }
+        .form-group label { display: block; margin-bottom: 6px; font-weight: 500; }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: var(--card);
+            color: var(--text);
+        }
+        .password-toggle {
+            position: absolute;
+            right: 12px;
+            bottom: 12px;
+            cursor: pointer;
+            font-size: 1.2rem;
+        }
+
+        .table-wrapper { overflow-x: auto; }
+        table { width: 100%; background: var(--card); border-radius: 16px; overflow: hidden; border-collapse: collapse; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); }
+        th { background: var(--primary); color: white; }
+
+        .alert { padding: 12px; border-radius: 12px; margin-bottom: 16px; }
+        .alert-success { background: #d1fae5; color: #065f46; }
+        .alert-error { background: #fee2e2; color: #991b1b; }
+        .alert-warning { background: #fef3c7; color: #92400e; }
+        .alert-info { background: #dbeafe; color: #1e40af; }
+
+        .loading {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            color: white;
+            font-size: 1.2rem;
+        }
+
+        .whatsapp-float {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: #25D366;
+            color: white;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            text-decoration: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            z-index: 99;
+        }
+
+        footer {
+            margin-top: 48px;
+            padding: 20px;
+            text-align: center;
+            border-top: 1px solid var(--border);
+            font-size: 0.75rem;
+            color: var(--text-light);
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+            display: none;
+        }
+        .overlay.active { display: block; }
+
+        @media (max-width: 768px) {
+            .sidebar { width: 260px; }
+            .grid-3, .grid-2 { grid-template-columns: 1fr; }
+            .header { flex-direction: column; align-items: stretch; }
+            .datetime { text-align: center; }
+        }
+    </style>
+</head>
+<body>
+<div class="app">
+    <div class="overlay" id="overlay"></div>
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">🛡️🍇</div>
+            <h2>V-Gest</h2>
+            <p style="font-size: 0.8rem; opacity: 0.8;">Videira's Assessoria</p>
+        </div>
+        <nav class="sidebar-nav" id="nav"></nav>
+    </aside>
+
+    <main class="main">
+        <div class="header">
+            <button class="menu-btn" id="menuBtn">☰ Menu</button>
+            <div class="datetime" id="clock"></div>
+            <div class="header-actions" id="headerActions" style="display: none;">
+                <button class="icon-btn" id="darkBtn">🌙</button>
+                <button class="icon-btn" id="helpBtn">❓ Ajuda</button>
+            </div>
+        </div>
+        <div id="content"></div>
+        <footer>
+            <p>© 2026 Videira's Assessoria Empresarial - V-Gest v7.0 (Supabase)</p>
+            <p>📍 Luanda, Angola | 📱 @videira.assessoria | 📧 leandrovideira66@gmail.com</p>
+        </footer>
+    </main>
+</div>
+<a href="https://wa.me/244954289109?text=Olá! Vim do V-Gest e preciso de ajuda" class="whatsapp-float" target="_blank">💬</a>
+
+<script>
+    // ==================== CONFIGURAÇÃO SUPABASE ====================
+    const SUPABASE_URL = 'https://mjpdlsmgztaybqlbslwd.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qcGRsc21nenRheWJxbGJzbHdkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxODYxMDAsImV4cCI6MjA4OTc2MjEwMH0.4wnFn7fhs5QiYSVMnj3O4lnyXRR63cahGfxOqAtTJok';
+    
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let currentUser = null;
+    let currentMerchantId = null;
+    let businessNetwork = [];
+    let marketProducts = [];
+
+    const ADMIN_EMAIL = 'admin@v-gest.ao';
+    const ADMIN_PASS = 'admin123';
+
+    async function loadNetwork() {
+        const { data } = await supabase.from('business_network').select('*');
+        if (data) businessNetwork = data;
+        return businessNetwork;
     }
 
-    .dark-mode {
-        --bg-light: #1a1a1a;
-        --text-dark: #e0e0e0;
-        --white: #2d2d2d;
+    async function loadMarket() {
+        const { data } = await supabase.from('market_products').select('*');
+        if (data) marketProducts = data;
+        return marketProducts;
     }
 
-    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-
-    body {
-        background-color: var(--bg-light);
-        color: var(--text-dark);
-        /* Textura de Videira Suave no Fundo */
-        background-image: url('https://www.transparenttextures.com/patterns/leaves.png'); /* Simulação de textura */
-        background-attachment: fixed;
-        transition: var(--transition);
+    async function loadMerchantData() {
+        if (!currentUser || currentUser.isAdmin) return null;
+        const { data: merchant } = await supabase
+            .from('merchants')
+            .select('id')
+            .eq('email', currentUser.email)
+            .single();
+        if (!merchant) return null;
+        currentMerchantId = merchant.id;
+        
+        const [customers, invoices, products, documents] = await Promise.all([
+            supabase.from('customers').select('*').eq('merchant_id', merchant.id),
+            supabase.from('invoices').select('*').eq('merchant_id', merchant.id),
+            supabase.from('products').select('*').eq('merchant_id', merchant.id),
+            supabase.from('documents').select('*').eq('merchant_id', merchant.id)
+        ]);
+        
+        return {
+            merchantId: merchant.id,
+            customers: customers.data || [],
+            invoices: invoices.data || [],
+            products: products.data || [],
+            documents: documents.data || []
+        };
     }
 
-    /* Overlay de cor para a textura */
-    body::before {
-        content: "";
-        position: fixed;
-        top: 0; left: 0; width: 100%; height: 100%;
-        background: var(--light-gold);
-        opacity: 0.08;
-        z-index: -1;
-        pointer-events: none;
+    async function getPendingCount() {
+        const { count } = await supabase.from('pending').select('*', { count: 'exact', head: true });
+        return count || 0;
     }
 
-    /* Layout Principal */
-    .wrapper { display: flex; min-height: 100vh; }
-
-    /* Sidebar */
-    aside {
-        width: 260px;
-        background: var(--primary-green);
-        color: white;
-        padding: 20px;
-        display: flex;
-        flex-direction: column;
-        position: sticky;
-        top: 0;
-        height: 100vh;
+    async function getMerchantsCount() {
+        const { count } = await supabase.from('merchants').select('*', { count: 'exact', head: true });
+        return count || 0;
     }
 
-    .logo-area {
-        text-align: center;
-        padding-bottom: 20px;
-        border-bottom: 1px solid var(--gold);
-        margin-bottom: 20px;
+    async function getExpiringDocsCount() {
+        if (!currentUser) return 0;
+        if (currentUser.isAdmin) {
+            const { data } = await supabase.from('documents').select('validade');
+            if (!data) return 0;
+            const hoje = new Date();
+            return data.filter(d => {
+                if (!d.validade) return false;
+                const validade = new Date(d.validade);
+                const diff = (validade - hoje) / (1000 * 60 * 60 * 24);
+                return diff <= 30 && diff > 0;
+            }).length;
+        } else {
+            if (!currentMerchantId) return 0;
+            const { data } = await supabase
+                .from('documents')
+                .select('validade')
+                .eq('merchant_id', currentMerchantId);
+            if (!data) return 0;
+            const hoje = new Date();
+            return data.filter(d => {
+                if (!d.validade) return false;
+                const validade = new Date(d.validade);
+                const diff = (validade - hoje) / (1000 * 60 * 60 * 24);
+                return diff <= 30 && diff > 0;
+            }).length;
+        }
     }
 
-    .logo-shield {
-        font-size: 2rem;
-        color: var(--gold);
+    function closeMenu() { sidebar.classList.remove('open'); overlay.classList.remove('active'); }
+    function openMenu() { sidebar.classList.add('open'); overlay.classList.add('active'); }
+
+    function updateClock() {
+        const now = new Date();
+        const dias = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+        const diaSemana = dias[now.getDay()];
+        const data = now.toLocaleDateString('pt-PT');
+        const hora = now.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
+        document.getElementById('clock').innerHTML = `${diaSemana}, ${data} - ${hora}`;
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    function showLoading(callback) {
+        const loader = document.createElement('div');
+        loader.className = 'loading';
+        loader.innerHTML = '⏳ Processando...';
+        document.body.appendChild(loader);
+        setTimeout(() => { loader.remove(); callback(); }, 800);
     }
 
-    nav ul { list-style: none; }
-    nav ul li {
-        padding: 12px 15px;
-        margin: 5px 0;
-        border-radius: 5px;
-        cursor: pointer;
-        transition: var(--transition);
-        display: flex;
-        align-items: center;
-        gap: 10px;
+    function showMessage(msg, type, targetId = 'loginMsg') {
+        const msgDiv = document.getElementById(targetId);
+        if (msgDiv) {
+            msgDiv.innerHTML = `<div class="alert alert-${type}">${msg}</div>`;
+            setTimeout(() => { msgDiv.innerHTML = ''; }, 4000);
+        } else {
+            alert(msg);
+        }
     }
 
-    nav ul li:hover, nav ul li.active {
-        background: var(--gold);
-        color: var(--primary-green);
+    function logout() {
+        currentUser = null;
+        currentMerchantId = null;
+        localStorage.removeItem('currentUser');
+        document.body.classList.remove('dark');
+        document.getElementById('headerActions').style.display = 'none';
+        showLogin();
     }
 
-    /* Main Content */
-    main { flex: 1; padding: 25px; position: relative; }
-
-    header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 30px;
-        background: var(--white);
-        padding: 15px 25px;
-        border-radius: 10px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    let backPressCount = 0;
+    function handleBackPress() {
+        backPressCount++;
+        if (backPressCount >= 2) {
+            logout();
+            backPressCount = 0;
+        } else {
+            showMessage('⚠️ Pressione novamente para sair', 'warning', 'adminMsg');
+            setTimeout(() => { backPressCount = 0; }, 3000);
+        }
     }
 
-    .btn-help {
-        background: var(--gold);
-        color: var(--primary-green);
-        border: none;
-        padding: 8px 15px;
-        border-radius: 20px;
-        font-weight: bold;
-        cursor: pointer;
+    async function renderMenu() {
+        if (!currentUser) return;
+        let html = '';
+        if (currentUser.isAdmin) {
+            const pendingCount = await getPendingCount();
+            const expiringDocs = await getExpiringDocsCount();
+            html += `<button data-page="admin">
+                        👑 Gestão de Comerciantes
+                        ${pendingCount > 0 ? `<span class="badge">${pendingCount}</span>` : ''}
+                     </button>`;
+            html += `<button data-page="dashboard">
+                        📊 Dashboard Admin
+                        ${expiringDocs > 0 ? `<span class="badge">${expiringDocs}</span>` : ''}
+                     </button>`;
+            html += `<button data-page="market">🛒 Mercado</button>`;
+            html += `<button data-page="network">🌐 Rede de Negócios</button>`;
+        } else {
+            const expiringDocs = await getExpiringDocsCount();
+            html += `<button data-page="dashboard">
+                        📊 Dashboard
+                        ${expiringDocs > 0 ? `<span class="badge">${expiringDocs}</span>` : ''}
+                     </button>`;
+            html += `<button data-page="faturas">📊 Faturas</button>`;
+            html += `<button data-page="clientes">👥 Meus Clientes</button>`;
+            html += `<button data-page="produtos">📦 Meus Produtos</button>`;
+            html += `<button data-page="contabilidade">💰 Contabilidade</button>`;
+            html += `<button data-page="documentos">📂 Documentos</button>`;
+            html += `<button data-page="market">🛒 Mercado</button>`;
+            html += `<button data-page="network">🌐 Rede de Negócios</button>`;
+        }
+        html += `<button data-page="logout">🚪 Sair</button>`;
+        document.getElementById('nav').innerHTML = html;
+        document.querySelectorAll('.sidebar-nav button').forEach(btn => {
+            btn.addEventListener('click', () => showPage(btn.dataset.page));
+        });
     }
 
-    /* Cards do Dashboard */
-    .dashboard-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 20px;
-        margin-bottom: 30px;
+    async function showPage(page) {
+        if (!currentUser) { showLogin(); return; }
+        closeMenu();
+        if (page === 'dashboard') showDashboard();
+        else if (page === 'network') showNetwork();
+        else if (page === 'market') showMarket();
+        else if (page === 'faturas') showFaturas();
+        else if (page === 'clientes') showClientes();
+        else if (page === 'produtos') showProdutos();
+        else if (page === 'contabilidade') showContabilidade();
+        else if (page === 'documentos') showDocumentos();
+        else if (page === 'admin') showAdminPanel();
+        else if (page === 'logout') handleBackPress();
+
+        document.querySelectorAll('.sidebar-nav button').forEach(btn => {
+            if (btn.dataset.page === page) btn.classList.add('active');
+            else btn.classList.remove('active');
+        });
     }
 
-    .card {
-        background: var(--white);
-        padding: 20px;
-        border-radius: 10px;
-        border-left: 5px solid var(--gold);
-        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    function showLogin() {
+        document.getElementById('headerActions').style.display = 'none';
+        document.getElementById('content').innerHTML = `
+            <div style="max-width: 400px; margin: 50px auto;">
+                <h2>🔐 Entrar no V-Gest</h2>
+                <div id="loginMsg"></div>
+                <div class="form-group">
+                    <label>Email ou Telefone</label>
+                    <input type="text" id="loginUser" placeholder="email@exemplo.com ou 923456789">
+                </div>
+                <div class="form-group">
+                    <label>Senha</label>
+                    <input type="password" id="loginPass" style="padding-right: 40px;">
+                    <span class="password-toggle" onclick="togglePassword('loginPass')">👁️</span>
+                </div>
+                <button class="btn-primary" id="doLogin">Entrar</button>
+                <p style="margin-top: 16px;"><a href="#" id="showReg">📝 Criar conta grátis</a></p>
+                <div style="margin-top: 16px; font-size: 0.8rem;">
+                    <a href="#" id="forgotPass">Esqueceu a senha?</a>
+                </div>
+            </div>
+            <div id="regForm" style="display:none; max-width:400px; margin:20px auto;">
+                <h2>📝 Criar Conta (Comerciante)</h2>
+                <div id="regMsg"></div>
+                <div class="form-group"><label>Nome completo</label><input type="text" id="regNome"></div>
+                <div class="form-group"><label>Email</label><input type="email" id="regEmail"></div>
+                <div class="form-group"><label>Telefone (WhatsApp)</label><input type="tel" id="regTel" placeholder="923456789"></div>
+                <div class="form-group"><label>Nome do negócio</label><input type="text" id="regNeg"></div>
+                <div class="form-group">
+                    <label>Senha</label>
+                    <input type="password" id="regPass" style="padding-right: 40px;">
+                    <span class="password-toggle" onclick="togglePassword('regPass')">👁️</span>
+                </div>
+                <div class="form-group">
+                    <label>Confirmar Senha</label>
+                    <input type="password" id="regPassConfirm" style="padding-right: 40px;">
+                    <span class="password-toggle" onclick="togglePassword('regPassConfirm')">👁️</span>
+                </div>
+                <button class="btn-primary" id="doReg">Registrar</button>
+                <p><a href="#" id="backLogin">← Voltar ao login</a></p>
+            </div>
+        `;
+
+        document.getElementById('doLogin')?.addEventListener('click', async () => {
+            const userInput = document.getElementById('loginUser').value;
+            const pass = document.getElementById('loginPass').value;
+            if (userInput === ADMIN_EMAIL && pass === ADMIN_PASS) {
+                currentUser = { email: ADMIN_EMAIL, isAdmin: true, name: 'Administrador' };
+                localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                document.getElementById('headerActions').style.display = 'flex';
+                await loadNetwork();
+                await loadMarket();
+                await renderMenu();
+                showLoading(() => showDashboard());
+            } else {
+                const { data: merchant } = await supabase
+                    .from('merchants')
+                    .select('*')
+                    .eq('email', userInput)
+                    .eq('senha', pass)
+                    .single();
+                if (merchant && merchant.aprovado === true) {
+                    currentUser = { email: merchant.email, name: merchant.nome, isAdmin: false, telefone: merchant.telefone };
+                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                    document.getElementById('headerActions').style.display = 'flex';
+                    await loadNetwork();
+                    await loadMarket();
+                    await renderMenu();
+                    showLoading(() => showDashboard());
+                } else {
+                    const { data: pendingUser } = await supabase
+                        .from('pending')
+                        .select('*')
+                        .eq('email', userInput)
+                        .single();
+                    if (pendingUser) {
+                        document.getElementById('loginMsg').innerHTML = '<div class="alert alert-warning">⏳ Aguardando aprovação do administrador.<br>📱 <a href="#" onclick="window.location.href=\'https://wa.me/244954289109\'">Contacte-nos no WhatsApp</a> →</div>';
+                    } else {
+                        document.getElementById('loginMsg').innerHTML = '<div class="alert alert-error">❌ Email/Telefone ou senha inválidos<br>🔄 Tente novamente ou <a href="#" onclick="window.location.href=\'https://wa.me/244954289109\'">contacte pelo WhatsApp</a></div>';
+                    }
+                }
+            }
+        });
+
+        document.getElementById('showReg')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            document.getElementById('loginMsg').parentElement.style.display = 'none';
+            document.getElementById('regForm').style.display = 'block';
+            document.getElementById('regMsg').innerHTML = '';
+        });
+        document.getElementById('backLogin')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            document.getElementById('loginMsg').parentElement.style.display = 'block';
+            document.getElementById('regForm').style.display = 'none';
+            document.getElementById('loginMsg').innerHTML = '';
+        });
+        document.getElementById('forgotPass')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            document.getElementById('loginMsg').innerHTML = '<div class="alert alert-info">🔐 Esqueceu a senha? Contacte o administrador: <a href="https://wa.me/244954289109">WhatsApp 954 289 109</a></div>';
+        });
+        document.getElementById('doReg')?.addEventListener('click', async () => {
+            const nome = document.getElementById('regNome').value;
+            const email = document.getElementById('regEmail').value;
+            const tel = document.getElementById('regTel').value;
+            const neg = document.getElementById('regNeg').value;
+            const senha = document.getElementById('regPass').value;
+            const confirmSenha = document.getElementById('regPassConfirm').value;
+
+            if (!nome || !email || !senha) {
+                document.getElementById('regMsg').innerHTML = '<div class="alert alert-error">Preencha nome, email e senha</div>';
+                return;
+            }
+            if (senha !== confirmSenha) {
+                document.getElementById('regMsg').innerHTML = '<div class="alert alert-error">As senhas não coincidem</div>';
+                return;
+            }
+
+            const { data: existing } = await supabase
+                .from('merchants')
+                .select('email')
+                .eq('email', email)
+                .single();
+            if (existing) {
+                document.getElementById('regMsg').innerHTML = '<div class="alert alert-error">Email já registado</div>';
+                return;
+            }
+
+            const { error } = await supabase
+                .from('pending')
+                .insert([{ nome, email, telefone: tel, negocio: neg, senha }]);
+
+            if (error) {
+                document.getElementById('regMsg').innerHTML = '<div class="alert alert-error">Erro ao registrar. Tente novamente.</div>';
+                return;
+            }
+
+            document.getElementById('regMsg').innerHTML = '<div class="alert alert-success">✅ Cadastro realizado! Aguarde aprovação do administrador.</div>';
+            document.getElementById('regNome').value = '';
+            document.getElementById('regEmail').value = '';
+            document.getElementById('regTel').value = '';
+            document.getElementById('regNeg').value = '';
+            document.getElementById('regPass').value = '';
+            document.getElementById('regPassConfirm').value = '';
+
+            setTimeout(() => {
+                document.getElementById('loginMsg').parentElement.style.display = 'block';
+                document.getElementById('regForm').style.display = 'none';
+                document.getElementById('loginMsg').innerHTML = '<div class="alert alert-success">✅ Conta criada! Aguarde aprovação do administrador.</div>';
+            }, 3000);
+        });
     }
 
-    /* Tutorial Tour Overlay */
-    #tour-overlay {
-        position: fixed;
-        top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(0,0,0,0.7);
-        display: none;
-        z-index: 1000;
-        justify-content: center;
-        align-items: center;
+    window.togglePassword = (fieldId) => {
+        const field = document.getElementById(fieldId);
+        if (field.type === 'password') field.type = 'text';
+        else field.type = 'password';
+    };
+
+    async function showDashboard() {
+        if (currentUser.isAdmin) {
+            const totalComerciantes = await getMerchantsCount();
+            const pendentes = await getPendingCount();
+            const expiringDocs = await getExpiringDocsCount();
+            document.getElementById('content').innerHTML = `
+                <h2>📊 Dashboard Administrativo</h2>
+                <div class="grid-3">
+                    <div class="card"><h3>COMERCIANTES ATIVOS</h3><div class="value">${totalComerciantes}</div></div>
+                    <div class="card"><h3>SOLICITAÇÕES PENDENTES</h3><div class="value">${pendentes}</div></div>
+                    <div class="card"><h3>DOCUMENTOS A EXPIRAR</h3><div class="value">${expiringDocs}</div></div>
+                </div>
+                <div class="card"><h3>📌 Próximo Vencimento Fiscal</h3><p>IVA - Dia 15 (faltam 4 dias)</p></div>
+            `;
+        } else {
+            const data = await loadMerchantData();
+            const totalVendas = data?.invoices?.filter(i => i.pago).reduce((s,i) => s + i.valor, 0) || 0;
+            const pendentes = data?.invoices?.filter(i => !i.pago).reduce((s,i) => s + i.valor, 0) || 0;
+            const totalClientes = data?.customers?.length || 0;
+            document.getElementById('content').innerHTML = `
+                <h2>📊 Dashboard - ${currentUser.name}</h2>
+                <div class="grid-3">
+                    <div class="card"><h3>VENDAS DO MÊS</h3><div class="value">${totalVendas.toLocaleString()} Kz</div></div>
+                    <div class="card"><h3>FATURAS PENDENTES</h3><div class="value">${pendentes.toLocaleString()} Kz</div></div>
+                    <div class="card"><h3>MEUS CLIENTES</h3><div class="value">${totalClientes}</div></div>
+                </div>
+                <div class="card"><h3>📌 Próximo Vencimento</h3><p>IVA - Dia 15 (faltam 4 dias)</p></div>
+            `;
+        }
     }
 
-    .tour-box {
-        background: var(--white);
-        padding: 30px;
-        border-radius: 15px;
-        max-width: 400px;
-        position: relative;
-        border: 2px solid var(--gold);
-        text-align: center;
+    async function showNetwork() {
+        await loadNetwork();
+        let html = `<h2>🌐 Rede de Negócios</h2><div id="networkList"></div>`;
+        document.getElementById('content').innerHTML = html;
+        const container = document.getElementById('networkList');
+        let grid = '<div class="grid-2">';
+        businessNetwork.forEach((b, i) => {
+            grid += `<div class="card"><h3>${b.nome}</h3><p>📍 ${b.localizacao}</p><p>🏭 ${b.setor}</p><p>🎯 Procura: ${b.procura}</p><button class="btn-primary" onclick="connectBusiness(${i})">${b.contactado ? '✅ Conectado' : '🔗 Conectar'}</button></div>`;
+        });
+        grid += '</div>';
+        container.innerHTML = grid;
+    }
+    window.connectBusiness = async (idx) => {
+        const item = businessNetwork[idx];
+        await supabase.from('business_network').update({ contactado: true }).eq('id', item.id);
+        await loadNetwork();
+        showNetwork();
+    };
+
+    async function showMarket() {
+        await loadMarket();
+        let html = `<h2>🛒 Mercado</h2><div id="marketList"></div>`;
+        document.getElementById('content').innerHTML = html;
+        const container = document.getElementById('marketList');
+        let grid = '<div class="grid-2">';
+        marketProducts.forEach(p => {
+            grid += `<div class="card"><h3>${p.imagem} ${p.nome}</h3><p>💰 ${p.preco.toLocaleString()} Kz</p><p>⭐ ${p.avaliacao} ★</p><p>🏪 ${p.vendedor}</p><button class="btn-primary" onclick="addToCart('${p.nome}', ${p.preco})">➕ Adicionar</button></div>`;
+        });
+        grid += '</div>';
+        container.innerHTML = grid;
+    }
+    window.addToCart = (name, price) => { alert(`🛒 ${name} adicionado! Valor: ${price.toLocaleString()} Kz`); };
+
+    async function showFaturas() {
+        const data = await loadMerchantData();
+        let html = `<h2>📄 Minhas Faturas</h2><button class="btn-primary" onclick="novaFatura()">+ Nova Fatura</button><div id="faturasList"></div>`;
+        document.getElementById('content').innerHTML = html;
+        const container = document.getElementById('faturasList');
+        if (!data?.invoices || data.invoices.length === 0) container.innerHTML = '<p>Nenhuma fatura registada.</p>';
+        else {
+            let table = '<div class="table-wrapper">能able> <th>Data</th><th>Cliente</th><th>Valor</th><th>Status</th><th>Ação</th>  ·';
+            data.invoices.forEach((inv, i) => {
+                table += `§
+                    <td contenteditable="true" onblur="editarFatura(${inv.id}, 'cliente', this.innerText)">${inv.cliente}§
+                    <td contenteditable="true" onblur="editarFatura(${inv.id}, 'valor', parseFloat(this.innerText))">${inv.valor}§
+                    <td contenteditable="true" onblur="editarFatura(${inv.id}, 'data', this.innerText)">${inv.data}§
+                    <td contenteditable="true" onblur="editarFatura(${inv.id}, 'pago', this.innerText === '✅ Pago')">${inv.pago ? '✅ Pago' : '⏳ Pendente'}§
+                    <td><button class="btn-primary" onclick="togglePagoFatura(${inv.id}, ${!inv.pago})">${inv.pago ? 'Marcar Pendente' : 'Marcar Pago'}</button> <button class="btn-danger" onclick="deleteFatura(${inv.id})">🗑️</button>§
+                `;
+            });
+            table += '}</div>';
+            container.innerHTML = table;
+        }
     }
 
-    .tour-arrow {
-        position: absolute;
-        font-size: 2rem;
-        color: var(--gold);
-        animation: bounce 1s infinite;
+    window.novaFatura = () => {
+        document.getElementById('content').innerHTML = `<h2>➕ Nova Fatura</h2>
+            <div class="form-group"><label>Cliente</label><input id="fatCliente"></div>
+            <div class="form-group"><label>Valor (Kz)</label><input id="fatValor" type="number"></div>
+            <div class="form-group"><label>Data</label><input id="fatData" type="date" value="${new Date().toISOString().split('T')[0]}"></div>
+            <button class="btn-primary" onclick="salvarFatura()">💾 Salvar</button>
+            <button class="btn-secondary" onclick="showFaturas()">Cancelar</button>`;
+    };
+    window.salvarFatura = async () => {
+        const cliente = document.getElementById('fatCliente').value;
+        const valor = parseFloat(document.getElementById('fatValor').value);
+        const data = document.getElementById('fatData').value;
+        if (!cliente || !valor) return alert('Preencha cliente e valor');
+        await supabase.from('invoices').insert([{ merchant_id: currentMerchantId, cliente, valor, data, pago: false }]);
+        showFaturas();
+    };
+    window.togglePagoFatura = async (id, pago) => {
+        await supabase.from('invoices').update({ pago }).eq('id', id);
+        showFaturas();
+    };
+    window.deleteFatura = async (id) => {
+        if (confirm('Tem certeza?')) {
+            await supabase.from('invoices').delete().eq('id', id);
+            showFaturas();
+        }
+    };
+    window.editarFatura = async (id, campo, valor) => {
+        await supabase.from('invoices').update({ [campo]: valor }).eq('id', id);
+        showFaturas();
+    };
+
+    async function showClientes() {
+        const data = await loadMerchantData();
+        let html = `<h2>👥 Meus Clientes</h2><button class="btn-primary" onclick="novoCliente()">+ Novo Cliente</button><div id="clientesList"></div>`;
+        document.getElementById('content').innerHTML = html;
+        const container = document.getElementById('clientesList');
+        if (!data?.customers || data.customers.length === 0) container.innerHTML = '<p>Nenhum cliente cadastrado.</p>';
+        else {
+            let table = '<div class="table-wrapper">能able> <th>Nome</th><th>Email</th><th>Telefone</th><th>Ação</th>  ·';
+            data.customers.forEach((c, i) => {
+                table += `§
+                    <td contenteditable="true" onblur="editarCliente(${c.id}, 'nome', this.innerText)">${c.nome}§
+                    <td contenteditable="true" onblur="editarCliente(${c.id}, 'email', this.innerText)">${c.email}§
+                    <td contenteditable="true" onblur="editarCliente(${c.id}, 'telefone', this.innerText)">${c.telefone}§
+                    <td><button class="btn-danger" onclick="deleteCliente(${c.id})">Remover</button>§
+                `;
+            });
+            table += '}</div>';
+            container.innerHTML = table;
+        }
+    }
+    window.novoCliente = () => {
+        document.getElementById('content').innerHTML = `<h2>➕ Novo Cliente</h2>
+            <div class="form-group"><label>Nome</label><input id="cliNome"></div>
+            <div class="form-group"><label>Email</label><input id="cliEmail"></div>
+            <div class="form-group"><label>Telefone</label><input id="cliTel"></div>
+            <button class="btn-primary" onclick="salvarCliente()">Salvar</button>
+            <button class="btn-secondary" onclick="showClientes()">Cancelar</button>`;
+    };
+    window.salvarCliente = async () => {
+        const nome = document.getElementById('cliNome').value;
+        const email = document.getElementById('cliEmail').value;
+        const tel = document.getElementById('cliTel').value;
+        if (!nome) return alert('Nome obrigatório');
+        await supabase.from('customers').insert([{ merchant_id: currentMerchantId, nome, email, telefone: tel }]);
+        showClientes();
+    };
+    window.editarCliente = async (id, campo, valor) => {
+        await supabase.from('customers').update({ [campo]: valor }).eq('id', id);
+        showClientes();
+    };
+    window.deleteCliente = async (id) => {
+        if (confirm('Tem certeza?')) {
+            await supabase.from('customers').delete().eq('id', id);
+            showClientes();
+        }
+    };
+
+    async function showProdutos() {
+        const data = await loadMerchantData();
+        let html = `<h2>📦 Meus Produtos</h2><button class="btn-primary" onclick="addProduto()">+ Adicionar</button><div id="prodList"></div>`;
+        document.getElementById('content').innerHTML = html;
+        const container = document.getElementById('prodList');
+        if (!data?.products || data.products.length === 0) container.innerHTML = '<p>Nenhum produto cadastrado.</p>';
+        else {
+            let table = '<div class="table-wrapper">能able> <th>Produto</th><th>SKU</th><th>Preço</th><th></th>  ·';
+            data.products.forEach((p, i) => {
+                table += `§
+                    <td contenteditable="true" onblur="editarProduto(${p.id}, 'nome', this.innerText)">${p.nome}§
+                    <td contenteditable="true" onblur="editarProduto(${p.id}, 'sku', this.innerText)">${p.sku || '-'}§
+                    <td contenteditable="true" onblur="editarProduto(${p.id}, 'preco', parseFloat(this.innerText))">${p.preco}§
+                    <td><button class="btn-danger" onclick="deleteProduto(${p.id})">Remover</button>§
+                `;
+            });
+            table += '}</div>';
+            container.innerHTML = table;
+        }
+    }
+    window.addProduto = async () => {
+        await supabase.from('products').insert([{ merchant_id: currentMerchantId, nome: 'Novo Produto', sku: 'SKU-001', preco: 0 }]);
+        showProdutos();
+    };
+    window.editarProduto = async (id, campo, val) => {
+        await supabase.from('products').update({ [campo]: val }).eq('id', id);
+        showProdutos();
+    };
+    window.deleteProduto = async (id) => {
+        if (confirm('Tem certeza?')) {
+            await supabase.from('products').delete().eq('id', id);
+            showProdutos();
+        }
+    };
+
+    async function showContabilidade() {
+        const data = await loadMerchantData();
+        const receitas = data?.invoices?.filter(i => i.pago).reduce((s,i) => s + i.valor, 0) || 0;
+        const despesas = receitas * 0.42;
+        document.getElementById('content').innerHTML = `
+            <h2>💰 Minha Contabilidade</h2>
+            <div class="grid-3">
+                <div class="card"><h3>RECEITAS</h3><div class="value">${receitas.toLocaleString()} Kz</div></div>
+                <div class="card"><h3>DESPESAS</h3><div class="value">${despesas.toLocaleString()} Kz</div></div>
+                <div class="card"><h3>MARGEM</h3><div class="value">${((receitas-despesas)/receitas*100 || 0).toFixed(0)}%</div></div>
+            </div>
+        `;
     }
 
-    @keyframes bounce {
-        0%, 100% { transform: translateY(0); }
-        50% { transform: translateY(-10px); }
+    async function showDocumentos() {
+        const data = await loadMerchantData();
+        let html = `<h2>📂 Meus Documentos</h2><button class="btn-primary" onclick="novoDocumento()">+ Carregar</button><div id="docsList"></div>`;
+        document.getElementById('content').innerHTML = html;
+        const container = document.getElementById('docsList');
+        if (!data?.documents || data.documents.length === 0) container.innerHTML = '<p>Nenhum documento carregado.</p>';
+        else {
+            let grid = '<div class="grid-2">';
+            data.documents.forEach((d, i) => {
+                let expiracao = '';
+                if (d.validade) {
+                    const hoje = new Date();
+                    const validade = new Date(d.validade);
+                    const diff = Math.ceil((validade - hoje) / (1000 * 60 * 60 * 24));
+                    if (diff <= 30 && diff > 0) expiracao = `<span class="badge" style="background:var(--warning)">⚠️ Expira em ${diff} dias</span>`;
+                    else if (diff <= 0) expiracao = `<span class="badge" style="background:var(--danger)">❌ Expirado</span>`;
+                }
+                grid += `<div class="card"><h3>📄 ${d.nome}</h3><p>📅 ${d.data}</p><p>📦 ${d.categoria}</p>${expiracao}<button class="btn-danger" onclick="deleteDocumento(${d.id})">Remover</button></div>`;
+            });
+            grid += '</div>';
+            container.innerHTML = grid;
+        }
+    }
+    window.novoDocumento = () => {
+        document.getElementById('content').innerHTML = `<h2>➕ Novo Documento</h2>
+            <div class="form-group"><label>Nome</label><input id="docNome"></div>
+            <div class="form-group"><label>Categoria</label><select id="docCat"><option>Documentos Legais</option><option>Contratos</option><option>Outros</option></select></div>
+            <div class="form-group"><label>Data de Validade (opcional)</label><input type="date" id="docValidade"></div>
+            <div class="form-group"><label>Data de Emissão</label><input id="docData" type="date" value="${new Date().toISOString().split('T')[0]}"></div>
+            <button class="btn-primary" onclick="salvarDocumento()">Salvar</button>
+            <button class="btn-secondary" onclick="showDocumentos()">Cancelar</button>`;
+    };
+    window.salvarDocumento = async () => {
+        const nome = document.getElementById('docNome').value;
+        const categoria = document.getElementById('docCat').value;
+        const data = document.getElementById('docData').value;
+        const validade = document.getElementById('docValidade').value;
+        if (!nome) return alert('Nome obrigatório');
+        await supabase.from('documents').insert([{ merchant_id: currentMerchantId, nome, categoria, data, validade: validade || null }]);
+        showDocumentos();
+    };
+    window.deleteDocumento = async (id) => {
+        if (confirm('Tem certeza?')) {
+            await supabase.from('documents').delete().eq('id', id);
+            showDocumentos();
+        }
+    };
+
+    async function showAdminPanel() {
+        if (!currentUser?.isAdmin) return;
+        const { data: pendingData } = await supabase.from('pending').select('*');
+        const { data: merchantsData } = await supabase.from('merchants').select('*');
+        document.getElementById('content').innerHTML = `
+            <h2>👑 Gestão de Comerciantes</h2>
+            <div id="adminMsg"></div>
+            <h3>📋 Solicitações Pendentes (${pendingData?.length || 0})</h3>
+            <div id="pendingList"></div>
+            <h3>✅ Comerciantes Aprovados (${merchantsData?.length || 0})</h3>
+            <div id="approvedList"></div>
+        `;
+        const pendingDiv = document.getElementById('pendingList');
+        if (pendingData?.length) {
+            let html = '<div class="table-wrapper">能able> <th>Nome</th><th>Email/Telefone</th><th>Negócio</th><th>Ação</th>  ·';
+            pendingData.forEach((p, i) => {
+                html += `§
+                    <td contenteditable="true">${p.nome}§
+                    <td contenteditable="true">${p.email} / ${p.telefone || '-'}§
+                    <td contenteditable="true">${p.negocio || '-'}§
+                    <td><button class="btn-primary" onclick="approveUser('${p.email}')">✅ Aprovar</button> <button class="btn-warning" onclick="rejectUser('${p.email}')">❌ Rejeitar</button>§
+                `;
+            });
+            html += '}</div>';
+            pendingDiv.innerHTML = html;
+        } else pendingDiv.innerHTML = '<p>Nenhuma solicitação pendente</p>';
+
+        const approvedDiv = document.getElementById('approvedList');
+        if (merchantsData?.length) {
+            let html = '<div class="table-wrapper">能able> <th>Nome</th><th>Email/Telefone</th><th>Negócio</th><th>Senha</th><th>Ação</th>  ·';
+            merchantsData.forEach((u, i) => {
+                html += `§
+                    <td contenteditable="true">${u.nome}§
+                    <td contenteditable="true">${u.email} / ${u.telefone || '-'}§
+                    <td contenteditable="true">${u.negocio || '-'}§
+                    <td>🔒 ${u.senha}§
+                    <td><button class="btn-danger" onclick="deleteMerchant('${u.email}')">🗑️ Excluir</button>§
+                `;
+            });
+            html += '}</div>';
+            approvedDiv.innerHTML = html;
+        } else approvedDiv.innerHTML = '<p>Nenhum comerciante aprovado</p>';
     }
 
-    /* WhatsApp Floating */
-    .whatsapp-float {
-        position: fixed;
-        bottom: 30px;
-        right: 30px;
-        background: #25d366;
-        color: white;
-        width: 60px;
-        height: 60px;
-        border-radius: 50%;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        font-size: 30px;
-        box-shadow: 2px 2px 10px rgba(0,0,0,0.2);
-        z-index: 999;
-        text-decoration: none;
-    }
+    window.approveUser = async (email) => {
+        const { data: pendingUser } = await supabase.from('pending').select('*').eq('email', email).single();
+        if (pendingUser) {
+            await supabase.from('merchants').insert([{ ...pendingUser, aprovado: true }]);
+            await supabase.from('pending').delete().eq('email', email);
+            showAdminPanel();
+            showMessage('✅ Comerciante aprovado!', 'success', 'adminMsg');
+        }
+    };
+    window.rejectUser = async (email) => {
+        await supabase.from('pending').delete().eq('email', email);
+        showAdminPanel();
+        showMessage('❌ Comerciante rejeitado.', 'warning', 'adminMsg');
+    };
+    window.deleteMerchant = async (email) => {
+        if (confirm('⚠️ Tem certeza?')) {
+            await supabase.from('merchants').delete().eq('email', email);
+            showAdminPanel();
+            showMessage('🗑️ Comerciante excluído.', 'warning', 'adminMsg');
+        }
+    };
 
-    /* Footer */
-    footer {
-        margin-top: 50px;
-        padding: 20px;
-        text-align: center;
-        border-top: 1px solid var(--gold);
-        font-size: 0.9rem;
-    }
+    document.getElementById('menuBtn').addEventListener('click', () => { if (sidebar.classList.contains('open')) closeMenu(); else openMenu(); });
+    document.getElementById('overlay').addEventListener('click', closeMenu);
+    document.getElementById('darkBtn').addEventListener('click', () => { document.body.classList.toggle('dark'); localStorage.setItem('dark', document.body.classList.contains('dark') ? 'dark' : ''); });
+    document.getElementById('helpBtn').addEventListener('click', () => alert("📘 V-Gest v7.0 (Supabase)\n\nADMIN: admin@v-gest.ao / admin123\n- Gerencia comerciantes\n- Dados na nuvem\n\nCLIENTE:\n- Cria conta → aguarda aprovação\n- Gerencia seus próprios dados\n\nSuporte: WhatsApp 954 289 109"));
 
-    /* Central de Ajuda */
-    .help-center { display: none; }
-    .faq-item { margin-bottom: 10px; border: 1px solid #ddd; padding: 10px; border-radius: 5px; }
-
-    /* Progresso Gamificado */
-    .progress-container {
-        background: #eee;
-        border-radius: 10px;
-        height: 10px;
-        width: 100%;
-        margin: 10px 0;
-    }
-    .progress-bar {
-        background: var(--gold);
-        height: 100%;
-        border-radius: 10px;
-        width: 0%;
-        transition: width 0.5s;
-    }
-</style> 
+    if (localStorage.getItem('dark') === 'dark') document.body.classList.add('dark');
+    const savedUser = localStorage.getItem('currentUser');
+    if (savedUser) {
+        currentUser = JSON.parse(savedUser);
+        document.getElementById('headerActions').style.display = 'flex';
+        loadNetwork().then(() => loadMarket()).then(() => renderMenu()).then(() => showDashboard());
+    } else showLogin();
+</script>
+</body>
+</html>
