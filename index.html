@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>V-Gest | Videira's Assessoria</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * {
             margin: 0;
@@ -25,11 +26,15 @@
             --success: #10b981;
         }
 
-        body {
-            background: var(--bg);
-            color: var(--text);
+        .dark {
+            --bg: #0f172a;
+            --card: #1e293b;
+            --text: #f1f5f9;
+            --text-light: #94a3b8;
+            --border: #334155;
         }
 
+        body { background: var(--bg); color: var(--text); transition: background 0.2s; }
         .app { display: flex; min-height: 100vh; }
 
         .sidebar {
@@ -166,7 +171,7 @@
             font-size: 0.8rem;
         }
 
-        .form-group { margin-bottom: 16px; }
+        .form-group { margin-bottom: 16px; position: relative; }
         .form-group label { display: block; margin-bottom: 6px; font-weight: 500; }
         .form-group input, .form-group select {
             width: 100%;
@@ -273,7 +278,7 @@
         </div>
         <div id="content"></div>
         <footer>
-            <p>© 2026 Videira's Assessoria Empresarial - V-Gest v2.0</p>
+            <p>© 2026 Videira's Assessoria Empresarial - V-Gest v8.0 (Supabase)</p>
             <p>📍 Luanda, Angola | 📱 @videira.assessoria | 📧 leandrovideira66@gmail.com</p>
         </footer>
     </main>
@@ -281,22 +286,50 @@
 <a href="https://wa.me/244954289109?text=Olá! Vim do V-Gest e preciso de ajuda" class="whatsapp-float" target="_blank">💬</a>
 
 <script>
-    let users = JSON.parse(localStorage.getItem('vgest_users') || '[]');
-    let pending = JSON.parse(localStorage.getItem('vgest_pending') || '[]');
-    let invoices = JSON.parse(localStorage.getItem('vgest_invoices') || '[]');
-    let clients = JSON.parse(localStorage.getItem('vgest_clients') || '[]');
-    let products = JSON.parse(localStorage.getItem('vgest_products') || '[]');
+    // ==================== CONFIGURAÇÃO SUPABASE ====================
+    const SUPABASE_URL = 'https://mjpdlsmgztaybqlbslwd.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qcGRsc21nenRheWJxbGJzbHdkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxODYxMDAsImV4cCI6MjA4OTc2MjEwMH0.4wnFn7fhs5QiYSVMnj3O4lnyXRR63cahGfxOqAtTJok';
+    
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
     let currentUser = null;
+    let currentMerchantId = null;
 
     const ADMIN_EMAIL = 'admin@v-gest.ao';
     const ADMIN_PASS = 'admin123';
 
-    function saveData() {
-        localStorage.setItem('vgest_users', JSON.stringify(users));
-        localStorage.setItem('vgest_pending', JSON.stringify(pending));
-        localStorage.setItem('vgest_invoices', JSON.stringify(invoices));
-        localStorage.setItem('vgest_clients', JSON.stringify(clients));
-        localStorage.setItem('vgest_products', JSON.stringify(products));
+    async function loadMerchantData() {
+        if (!currentUser || currentUser.isAdmin) return null;
+        const { data: merchant } = await supabase
+            .from('merchants')
+            .select('id')
+            .eq('email', currentUser.email)
+            .single();
+        if (!merchant) return null;
+        currentMerchantId = merchant.id;
+        
+        const [customers, invoices, products] = await Promise.all([
+            supabase.from('customers').select('*').eq('merchant_id', merchant.id),
+            supabase.from('invoices').select('*').eq('merchant_id', merchant.id),
+            supabase.from('products').select('*').eq('merchant_id', merchant.id)
+        ]);
+        
+        return {
+            merchantId: merchant.id,
+            customers: customers.data || [],
+            invoices: invoices.data || [],
+            products: products.data || []
+        };
+    }
+
+    async function getPendingCount() {
+        const { count } = await supabase.from('pending').select('*', { count: 'exact', head: true });
+        return count || 0;
+    }
+
+    async function getMerchantsCount() {
+        const { count } = await supabase.from('merchants').select('*', { count: 'exact', head: true });
+        return count || 0;
     }
 
     function closeMenu() { sidebar.classList.remove('open'); overlay.classList.remove('active'); }
@@ -314,7 +347,11 @@
     updateClock();
 
     function showLoading(callback) {
-        setTimeout(callback, 500);
+        const loader = document.createElement('div');
+        loader.className = 'loading';
+        loader.innerHTML = '⏳ Processando...';
+        document.body.appendChild(loader);
+        setTimeout(() => { loader.remove(); callback(); }, 800);
     }
 
     function showMessage(msg, type, targetId = 'loginMsg') {
@@ -329,33 +366,30 @@
 
     function logout() {
         currentUser = null;
+        currentMerchantId = null;
         localStorage.removeItem('currentUser');
+        document.body.classList.remove('dark');
         document.getElementById('headerActions').style.display = 'none';
         showLogin();
     }
 
-    function showPage(page) {
-        if (!currentUser) { showLogin(); return; }
-        closeMenu();
-        if (page === 'dashboard') showDashboard();
-        else if (page === 'faturas') showFaturas();
-        else if (page === 'clientes') showClientes();
-        else if (page === 'produtos') showProdutos();
-        else if (page === 'contabilidade') showContabilidade();
-        else if (page === 'admin') showAdminPanel();
-        else if (page === 'logout') logout();
-
-        document.querySelectorAll('.sidebar-nav button').forEach(btn => {
-            if (btn.dataset.page === page) btn.classList.add('active');
-            else btn.classList.remove('active');
-        });
+    let backPressCount = 0;
+    function handleBackPress() {
+        backPressCount++;
+        if (backPressCount >= 2) {
+            logout();
+            backPressCount = 0;
+        } else {
+            showMessage('⚠️ Pressione novamente para sair', 'warning', 'adminMsg');
+            setTimeout(() => { backPressCount = 0; }, 3000);
+        }
     }
 
-    function renderMenu() {
+    async function renderMenu() {
         if (!currentUser) return;
         let html = '';
         if (currentUser.isAdmin) {
-            const pendingCount = pending.length;
+            const pendingCount = await getPendingCount();
             html += `<button data-page="admin">
                         👑 Gestão de Comerciantes
                         ${pendingCount > 0 ? `<span class="badge">${pendingCount}</span>` : ''}
@@ -379,6 +413,23 @@
         });
     }
 
+    async function showPage(page) {
+        if (!currentUser) { showLogin(); return; }
+        closeMenu();
+        if (page === 'dashboard') showDashboard();
+        else if (page === 'faturas') showFaturas();
+        else if (page === 'clientes') showClientes();
+        else if (page === 'produtos') showProdutos();
+        else if (page === 'contabilidade') showContabilidade();
+        else if (page === 'admin') showAdminPanel();
+        else if (page === 'logout') handleBackPress();
+
+        document.querySelectorAll('.sidebar-nav button').forEach(btn => {
+            if (btn.dataset.page === page) btn.classList.add('active');
+            else btn.classList.remove('active');
+        });
+    }
+
     function showLogin() {
         document.getElementById('headerActions').style.display = 'none';
         document.getElementById('content').innerHTML = `
@@ -387,52 +438,73 @@
                 <div id="loginMsg"></div>
                 <div class="form-group">
                     <label>Email ou Telefone</label>
-                    <input type="text" id="loginUser" placeholder="email@exemplo.com">
+                    <input type="text" id="loginUser" placeholder="email@exemplo.com ou 923456789">
                 </div>
                 <div class="form-group">
                     <label>Senha</label>
-                    <input type="password" id="loginPass">
+                    <input type="password" id="loginPass" style="padding-right: 40px;">
+                    <span class="password-toggle" onclick="togglePassword('loginPass')">👁️</span>
                 </div>
                 <button class="btn-primary" id="doLogin">Entrar</button>
                 <p style="margin-top: 16px;"><a href="#" id="showReg">📝 Criar conta grátis</a></p>
+                <div style="margin-top: 16px; font-size: 0.8rem;">
+                    <a href="#" id="forgotPass">Esqueceu a senha?</a>
+                </div>
             </div>
-            <div id="regForm" style="display:none; max-width:400px; margin:20px auto; background:var(--card); padding:30px; border-radius:20px;">
-                <h2>📝 Criar Conta</h2>
+            <div id="regForm" style="display:none; max-width:400px; margin:20px auto;">
+                <h2>📝 Criar Conta (Comerciante)</h2>
                 <div id="regMsg"></div>
                 <div class="form-group"><label>Nome completo</label><input type="text" id="regNome"></div>
                 <div class="form-group"><label>Email</label><input type="email" id="regEmail"></div>
-                <div class="form-group"><label>Telefone</label><input type="tel" id="regTel"></div>
+                <div class="form-group"><label>Telefone (WhatsApp)</label><input type="tel" id="regTel" placeholder="923456789"></div>
                 <div class="form-group"><label>Nome do negócio</label><input type="text" id="regNeg"></div>
-                <div class="form-group"><label>Senha</label><input type="password" id="regPass"></div>
-                <div class="form-group"><label>Confirmar Senha</label><input type="password" id="regPassConfirm"></div>
+                <div class="form-group">
+                    <label>Senha</label>
+                    <input type="password" id="regPass" style="padding-right: 40px;">
+                    <span class="password-toggle" onclick="togglePassword('regPass')">👁️</span>
+                </div>
+                <div class="form-group">
+                    <label>Confirmar Senha</label>
+                    <input type="password" id="regPassConfirm" style="padding-right: 40px;">
+                    <span class="password-toggle" onclick="togglePassword('regPassConfirm')">👁️</span>
+                </div>
                 <button class="btn-primary" id="doReg">Registrar</button>
                 <p><a href="#" id="backLogin">← Voltar ao login</a></p>
             </div>
         `;
 
-        document.getElementById('doLogin')?.addEventListener('click', () => {
+        document.getElementById('doLogin')?.addEventListener('click', async () => {
             const userInput = document.getElementById('loginUser').value;
             const pass = document.getElementById('loginPass').value;
             if (userInput === ADMIN_EMAIL && pass === ADMIN_PASS) {
                 currentUser = { email: ADMIN_EMAIL, isAdmin: true, name: 'Administrador' };
                 localStorage.setItem('currentUser', JSON.stringify(currentUser));
                 document.getElementById('headerActions').style.display = 'flex';
-                renderMenu();
+                await renderMenu();
                 showLoading(() => showDashboard());
             } else {
-                const user = users.find(u => (u.email === userInput) && u.senha === pass && u.aprovado === true);
-                if (user) {
-                    currentUser = { email: user.email, name: user.nome, isAdmin: false };
+                const { data: merchant } = await supabase
+                    .from('merchants')
+                    .select('*')
+                    .eq('email', userInput)
+                    .eq('senha', pass)
+                    .single();
+                if (merchant && merchant.aprovado === true) {
+                    currentUser = { email: merchant.email, name: merchant.nome, isAdmin: false, telefone: merchant.telefone };
                     localStorage.setItem('currentUser', JSON.stringify(currentUser));
                     document.getElementById('headerActions').style.display = 'flex';
-                    renderMenu();
+                    await renderMenu();
                     showLoading(() => showDashboard());
                 } else {
-                    const pend = pending.find(p => p.email === userInput);
-                    if (pend) {
-                        document.getElementById('loginMsg').innerHTML = '<div class="alert alert-warning">⏳ Aguardando aprovação do administrador.</div>';
+                    const { data: pendingUser } = await supabase
+                        .from('pending')
+                        .select('*')
+                        .eq('email', userInput)
+                        .single();
+                    if (pendingUser) {
+                        document.getElementById('loginMsg').innerHTML = '<div class="alert alert-warning">⏳ Aguardando aprovação do administrador.<br>📱 <a href="#" onclick="window.location.href=\'https://wa.me/244954289109\'">Contacte-nos no WhatsApp</a> →</div>';
                     } else {
-                        document.getElementById('loginMsg').innerHTML = '<div class="alert alert-error">❌ Email ou senha inválidos</div>';
+                        document.getElementById('loginMsg').innerHTML = '<div class="alert alert-error">❌ Email/Telefone ou senha inválidos<br>🔄 Tente novamente ou <a href="#" onclick="window.location.href=\'https://wa.me/244954289109\'">contacte pelo WhatsApp</a></div>';
                     }
                 }
             }
@@ -450,7 +522,11 @@
             document.getElementById('regForm').style.display = 'none';
             document.getElementById('loginMsg').innerHTML = '';
         });
-        document.getElementById('doReg')?.addEventListener('click', () => {
+        document.getElementById('forgotPass')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            document.getElementById('loginMsg').innerHTML = '<div class="alert alert-info">🔐 Esqueceu a senha? Contacte o administrador: <a href="https://wa.me/244954289109">WhatsApp 954 289 109</a></div>';
+        });
+        document.getElementById('doReg')?.addEventListener('click', async () => {
             const nome = document.getElementById('regNome').value;
             const email = document.getElementById('regEmail').value;
             const tel = document.getElementById('regTel').value;
@@ -466,13 +542,25 @@
                 document.getElementById('regMsg').innerHTML = '<div class="alert alert-error">As senhas não coincidem</div>';
                 return;
             }
-            if (users.find(u => u.email === email) || pending.find(p => p.email === email)) {
+
+            const { data: existing } = await supabase
+                .from('merchants')
+                .select('email')
+                .eq('email', email)
+                .single();
+            if (existing) {
                 document.getElementById('regMsg').innerHTML = '<div class="alert alert-error">Email já registado</div>';
                 return;
             }
 
-            pending.push({ nome, email, telefone: tel, negocio: neg, senha });
-            saveData();
+            const { error } = await supabase
+                .from('pending')
+                .insert([{ nome, email, telefone: tel, negocio: neg, senha }]);
+
+            if (error) {
+                document.getElementById('regMsg').innerHTML = '<div class="alert alert-error">Erro ao registrar. Tente novamente.</div>';
+                return;
+            }
 
             document.getElementById('regMsg').innerHTML = '<div class="alert alert-success">✅ Cadastro realizado! Aguarde aprovação do administrador.</div>';
             document.getElementById('regNome').value = '';
@@ -490,22 +578,29 @@
         });
     }
 
-    function showDashboard() {
+    window.togglePassword = (fieldId) => {
+        const field = document.getElementById(fieldId);
+        if (field.type === 'password') field.type = 'text';
+        else field.type = 'password';
+    };
+
+    async function showDashboard() {
         if (currentUser.isAdmin) {
-            const totalComerciantes = users.filter(u => u.aprovado).length;
-            const pendentes = pending.length;
+            const totalComerciantes = await getMerchantsCount();
+            const pendentes = await getPendingCount();
             document.getElementById('content').innerHTML = `
                 <h2>📊 Dashboard Administrativo</h2>
                 <div class="grid-3">
                     <div class="card"><h3>COMERCIANTES ATIVOS</h3><div class="value">${totalComerciantes}</div></div>
                     <div class="card"><h3>SOLICITAÇÕES PENDENTES</h3><div class="value">${pendentes}</div></div>
-                    <div class="card"><h3>FATURAS TOTAIS</h3><div class="value">${invoices.length}</div></div>
+                    <div class="card"><h3>FATURAS TOTAIS</h3><div class="value">0</div></div>
                 </div>
             `;
         } else {
-            const totalVendas = invoices.filter(i => i.pago).reduce((s,i) => s + i.valor, 0) || 0;
-            const pendentes = invoices.filter(i => !i.pago).reduce((s,i) => s + i.valor, 0) || 0;
-            const totalClientes = clients.length || 0;
+            const data = await loadMerchantData();
+            const totalVendas = data?.invoices?.filter(i => i.pago).reduce((s,i) => s + i.valor, 0) || 0;
+            const pendentes = data?.invoices?.filter(i => !i.pago).reduce((s,i) => s + i.valor, 0) || 0;
+            const totalClientes = data?.customers?.length || 0;
             document.getElementById('content').innerHTML = `
                 <h2>📊 Dashboard - ${currentUser.name}</h2>
                 <div class="grid-3">
@@ -513,24 +608,27 @@
                     <div class="card"><h3>FATURAS PENDENTES</h3><div class="value">${pendentes.toLocaleString()} Kz</div></div>
                     <div class="card"><h3>MEUS CLIENTES</h3><div class="value">${totalClientes}</div></div>
                 </div>
+                <div class="card"><h3>📌 Próximo Vencimento Fiscal</h3><p>IVA - Dia 15 (faltam 4 dias)</p></div>
             `;
         }
     }
 
-    function showFaturas() {
+    async function showFaturas() {
+        const data = await loadMerchantData();
         let html = `<h2>📄 Minhas Faturas</h2><button class="btn-primary" onclick="novaFatura()">+ Nova Fatura</button><div id="faturasList"></div>`;
         document.getElementById('content').innerHTML = html;
         const container = document.getElementById('faturasList');
-        if (invoices.length === 0) container.innerHTML = '<p>Nenhuma fatura registada.</p>';
-        else {
+        if (!data?.invoices || data.invoices.length === 0) {
+            container.innerHTML = '<p>Nenhuma fatura registada.</p>';
+        } else {
             let table = '<div class="table-wrapper">能able> <th>Cliente</th><th>Valor</th><th>Data</th><th>Status</th><th>Ação</th>  ·';
-            invoices.forEach((inv, i) => {
+            data.invoices.forEach((inv, i) => {
                 table += `§
-                    <td contenteditable="true" onblur="editarFatura(${i}, 'cliente', this.innerText)">${inv.cliente}§
-                    <td contenteditable="true" onblur="editarFatura(${i}, 'valor', parseFloat(this.innerText))">${inv.valor}§
-                    <td contenteditable="true" onblur="editarFatura(${i}, 'data', this.innerText)">${inv.data}§
+                    <td contenteditable="true" onblur="editarFatura(${inv.id}, 'cliente', this.innerText)">${inv.cliente}§
+                    <td contenteditable="true" onblur="editarFatura(${inv.id}, 'valor', parseFloat(this.innerText))">${inv.valor}§
+                    <td contenteditable="true" onblur="editarFatura(${inv.id}, 'data', this.innerText)">${inv.data}§
                     <td>${inv.pago ? '✅ Pago' : '⏳ Pendente'}§
-                    <td><button class="btn-primary" onclick="togglePago(${i})">${inv.pago ? 'Pendente' : 'Pago'}</button> <button class="btn-danger" onclick="deleteFatura(${i})">🗑️</button>§
+                    <td><button class="btn-primary" onclick="togglePagoFatura(${inv.id}, ${!inv.pago})">${inv.pago ? 'Pendente' : 'Pago'}</button> <button class="btn-danger" onclick="deleteFatura(${inv.id})">🗑️</button>§
                 `;
             });
             table += '}</div>';
@@ -546,46 +644,44 @@
             <button class="btn-primary" onclick="salvarFatura()">💾 Salvar</button>
             <button class="btn-secondary" onclick="showFaturas()">Cancelar</button>`;
     };
-    window.salvarFatura = () => {
+    window.salvarFatura = async () => {
         const cliente = document.getElementById('fatCliente').value;
         const valor = parseFloat(document.getElementById('fatValor').value);
         const data = document.getElementById('fatData').value;
         if (!cliente || !valor) return alert('Preencha cliente e valor');
-        invoices.push({ cliente, valor, data, pago: false });
-        saveData();
+        await supabase.from('invoices').insert([{ merchant_id: currentMerchantId, cliente, valor, data, pago: false }]);
         showFaturas();
     };
-    window.togglePago = (idx) => {
-        invoices[idx].pago = !invoices[idx].pago;
-        saveData();
+    window.togglePagoFatura = async (id, pago) => {
+        await supabase.from('invoices').update({ pago }).eq('id', id);
         showFaturas();
     };
-    window.deleteFatura = (idx) => {
+    window.deleteFatura = async (id) => {
         if (confirm('Tem certeza?')) {
-            invoices.splice(idx, 1);
-            saveData();
+            await supabase.from('invoices').delete().eq('id', id);
             showFaturas();
         }
     };
-    window.editarFatura = (idx, campo, valor) => {
-        invoices[idx][campo] = valor;
-        saveData();
+    window.editarFatura = async (id, campo, valor) => {
+        await supabase.from('invoices').update({ [campo]: valor }).eq('id', id);
         showFaturas();
     };
 
-    function showClientes() {
+    async function showClientes() {
+        const data = await loadMerchantData();
         let html = `<h2>👥 Meus Clientes</h2><button class="btn-primary" onclick="novoCliente()">+ Novo Cliente</button><div id="clientesList"></div>`;
         document.getElementById('content').innerHTML = html;
         const container = document.getElementById('clientesList');
-        if (clients.length === 0) container.innerHTML = '<p>Nenhum cliente cadastrado.</p>';
-        else {
+        if (!data?.customers || data.customers.length === 0) {
+            container.innerHTML = '<p>Nenhum cliente cadastrado.</p>';
+        } else {
             let table = '<div class="table-wrapper">能able> <th>Nome</th><th>Email</th><th>Telefone</th><th>Ação</th>  ·';
-            clients.forEach((c, i) => {
+            data.customers.forEach((c, i) => {
                 table += `§
-                    <td contenteditable="true" onblur="editarCliente(${i}, 'nome', this.innerText)">${c.nome}§
-                    <td contenteditable="true" onblur="editarCliente(${i}, 'email', this.innerText)">${c.email}§
-                    <td contenteditable="true" onblur="editarCliente(${i}, 'telefone', this.innerText)">${c.telefone}§
-                    <td><button class="btn-danger" onclick="deleteCliente(${i})">Remover</button>§
+                    <td contenteditable="true" onblur="editarCliente(${c.id}, 'nome', this.innerText)">${c.nome}§
+                    <td contenteditable="true" onblur="editarCliente(${c.id}, 'email', this.innerText)">${c.email}§
+                    <td contenteditable="true" onblur="editarCliente(${c.id}, 'telefone', this.innerText)">${c.telefone}§
+                    <td><button class="btn-danger" onclick="deleteCliente(${c.id})">Remover</button>§
                 `;
             });
             table += '}</div>';
@@ -600,67 +696,64 @@
             <button class="btn-primary" onclick="salvarCliente()">Salvar</button>
             <button class="btn-secondary" onclick="showClientes()">Cancelar</button>`;
     };
-    window.salvarCliente = () => {
+    window.salvarCliente = async () => {
         const nome = document.getElementById('cliNome').value;
         const email = document.getElementById('cliEmail').value;
         const tel = document.getElementById('cliTel').value;
         if (!nome) return alert('Nome obrigatório');
-        clients.push({ nome, email, telefone: tel });
-        saveData();
+        await supabase.from('customers').insert([{ merchant_id: currentMerchantId, nome, email, telefone: tel }]);
         showClientes();
     };
-    window.editarCliente = (idx, campo, valor) => {
-        clients[idx][campo] = valor;
-        saveData();
+    window.editarCliente = async (id, campo, valor) => {
+        await supabase.from('customers').update({ [campo]: valor }).eq('id', id);
         showClientes();
     };
-    window.deleteCliente = (idx) => {
+    window.deleteCliente = async (id) => {
         if (confirm('Tem certeza?')) {
-            clients.splice(idx, 1);
-            saveData();
+            await supabase.from('customers').delete().eq('id', id);
             showClientes();
         }
     };
 
-    function showProdutos() {
+    async function showProdutos() {
+        const data = await loadMerchantData();
         let html = `<h2>📦 Meus Produtos</h2><button class="btn-primary" onclick="addProduto()">+ Adicionar</button><div id="prodList"></div>`;
         document.getElementById('content').innerHTML = html;
         const container = document.getElementById('prodList');
-        if (products.length === 0) container.innerHTML = '<p>Nenhum produto cadastrado.</p>';
-        else {
+        if (!data?.products || data.products.length === 0) {
+            container.innerHTML = '<p>Nenhum produto cadastrado.</p>';
+        } else {
             let table = '<div class="table-wrapper">能able> <th>Produto</th><th>SKU</th><th>Preço</th><th></th>  ·';
-            products.forEach((p, i) => {
+            data.products.forEach((p, i) => {
                 table += `§
-                    <td contenteditable="true" onblur="editarProduto(${i}, 'nome', this.innerText)">${p.nome}§
-                    <td contenteditable="true" onblur="editarProduto(${i}, 'sku', this.innerText)">${p.sku || '-'}§
-                    <td contenteditable="true" onblur="editarProduto(${i}, 'preco', parseFloat(this.innerText))">${p.preco}§
-                    <td><button class="btn-danger" onclick="deleteProduto(${i})">Remover</button>§
+                    <td contenteditable="true" onblur="editarProduto(${p.id}, 'nome', this.innerText)">${p.nome}§
+                    <td contenteditable="true" onblur="editarProduto(${p.id}, 'sku', this.innerText)">${p.sku || '-'}§
+                    <td contenteditable="true" onblur="editarProduto(${p.id}, 'preco', parseFloat(this.innerText))">${p.preco}§
+                    <td><button class="btn-danger" onclick="deleteProduto(${p.id})">Remover</button>§
                 `;
             });
             table += '}</div>';
             container.innerHTML = table;
         }
     }
-    window.addProduto = () => {
-        products.push({ nome: 'Novo Produto', sku: 'SKU-001', preco: 0 });
-        saveData();
+    window.addProduto = async () => {
+        await supabase.from('products').insert([{ merchant_id: currentMerchantId, nome: 'Novo Produto', sku: 'SKU-001', preco: 0 }]);
         showProdutos();
     };
-    window.editarProduto = (idx, campo, valor) => {
-        products[idx][campo] = valor;
-        saveData();
+    window.editarProduto = async (id, campo, val) => {
+        await supabase.from('products').update({ [campo]: val }).eq('id', id);
         showProdutos();
     };
-    window.deleteProduto = (idx) => {
+    window.deleteProduto = async (id) => {
         if (confirm('Tem certeza?')) {
-            products.splice(idx, 1);
-            saveData();
+            await supabase.from('products').delete().eq('id', id);
             showProdutos();
         }
     };
 
-    function showContabilidade() {
-        const receitas = invoices.filter(i => i.pago).reduce((s,i) => s + i.valor, 0) || 0;
+    async function showContabilidade() {
+        const data = await loadMerchantData();
+        const receitas = data?.invoices?.filter(i => i.pago).reduce((s,i) => s + i.valor, 0) || 0;
         const despesas = receitas * 0.42;
         document.getElementById('content').innerHTML = `
             <h2>💰 Minha Contabilidade</h2>
@@ -672,25 +765,27 @@
         `;
     }
 
-    function showAdminPanel() {
+    async function showAdminPanel() {
         if (!currentUser?.isAdmin) return;
+        const { data: pendingData } = await supabase.from('pending').select('*');
+        const { data: merchantsData } = await supabase.from('merchants').select('*');
         document.getElementById('content').innerHTML = `
             <h2>👑 Gestão de Comerciantes</h2>
             <div id="adminMsg"></div>
-            <h3>📋 Solicitações Pendentes (${pending.length})</h3>
+            <h3>📋 Solicitações Pendentes (${pendingData?.length || 0})</h3>
             <div id="pendingList"></div>
-            <h3>✅ Comerciantes Aprovados (${users.filter(u => u.aprovado).length})</h3>
+            <h3>✅ Comerciantes Aprovados (${merchantsData?.length || 0})</h3>
             <div id="approvedList"></div>
         `;
         const pendingDiv = document.getElementById('pendingList');
-        if (pending.length) {
+        if (pendingData?.length) {
             let html = '<div class="table-wrapper">能able> <th>Nome</th><th>Email</th><th>Negócio</th><th>Ação</th>  ·';
-            pending.forEach((p, i) => {
+            pendingData.forEach((p, i) => {
                 html += `§
                     <td contenteditable="true">${p.nome}§
                     <td contenteditable="true">${p.email} / ${p.telefone || '-'}§
                     <td contenteditable="true">${p.negocio || '-'}§
-                    <td><button class="btn-primary" onclick="approveUser(${i})">✅ Aprovar</button> <button class="btn-danger" onclick="rejectUser(${i})">❌ Rejeitar</button>§
+                    <td><button class="btn-primary" onclick="approveUser('${p.email}')">✅ Aprovar</button> <button class="btn-danger" onclick="rejectUser('${p.email}')">❌ Rejeitar</button>§
                 `;
             });
             html += '}</div>';
@@ -698,16 +793,15 @@
         } else pendingDiv.innerHTML = '<p>Nenhuma solicitação pendente</p>';
 
         const approvedDiv = document.getElementById('approvedList');
-        const approved = users.filter(u => u.aprovado);
-        if (approved.length) {
+        if (merchantsData?.length) {
             let html = '<div class="table-wrapper">能able> <th>Nome</th><th>Email</th><th>Negócio</th><th>Senha</th><th>Ação</th>  ·';
-            approved.forEach((u, i) => {
+            merchantsData.forEach((u, i) => {
                 html += `§
                     <td contenteditable="true">${u.nome}§
                     <td contenteditable="true">${u.email} / ${u.telefone || '-'}§
                     <td contenteditable="true">${u.negocio || '-'}§
                     <td>🔒 ${u.senha}§
-                    <td><button class="btn-danger" onclick="deleteMerchant(${i})">🗑️ Excluir</button>§
+                    <td><button class="btn-danger" onclick="deleteMerchant('${u.email}')">🗑️ Excluir</button>§
                 `;
             });
             html += '}</div>';
@@ -715,24 +809,23 @@
         } else approvedDiv.innerHTML = '<p>Nenhum comerciante aprovado</p>';
     }
 
-    window.approveUser = (idx) => {
-        const merchant = pending[idx];
-        users.push({ ...merchant, aprovado: true });
-        pending.splice(idx, 1);
-        saveData();
-        showAdminPanel();
-        showMessage('✅ Comerciante aprovado!', 'success', 'adminMsg');
+    window.approveUser = async (email) => {
+        const { data: pendingUser } = await supabase.from('pending').select('*').eq('email', email).single();
+        if (pendingUser) {
+            await supabase.from('merchants').insert([{ ...pendingUser, aprovado: true }]);
+            await supabase.from('pending').delete().eq('email', email);
+            showAdminPanel();
+            showMessage('✅ Comerciante aprovado!', 'success', 'adminMsg');
+        }
     };
-    window.rejectUser = (idx) => {
-        pending.splice(idx, 1);
-        saveData();
+    window.rejectUser = async (email) => {
+        await supabase.from('pending').delete().eq('email', email);
         showAdminPanel();
         showMessage('❌ Comerciante rejeitado.', 'warning', 'adminMsg');
     };
-    window.deleteMerchant = (idx) => {
+    window.deleteMerchant = async (email) => {
         if (confirm('⚠️ Tem certeza?')) {
-            users.splice(idx, 1);
-            saveData();
+            await supabase.from('merchants').delete().eq('email', email);
             showAdminPanel();
             showMessage('🗑️ Comerciante excluído.', 'warning', 'adminMsg');
         }
@@ -741,15 +834,14 @@
     document.getElementById('menuBtn').addEventListener('click', () => { if (sidebar.classList.contains('open')) closeMenu(); else openMenu(); });
     document.getElementById('overlay').addEventListener('click', closeMenu);
     document.getElementById('darkBtn').addEventListener('click', () => { document.body.classList.toggle('dark'); localStorage.setItem('dark', document.body.classList.contains('dark') ? 'dark' : ''); });
-    document.getElementById('helpBtn').addEventListener('click', () => alert("📘 V-Gest v2.0\n\nADMIN: admin@v-gest.ao / admin123\n- Gerencia comerciantes\n\nCLIENTE:\n- Cria conta → aguarda aprovação\n- Gerencia faturas, clientes, produtos, contabilidade\n\nSuporte: WhatsApp 954 289 109"));
+    document.getElementById('helpBtn').addEventListener('click', () => alert("📘 V-Gest v8.0 (Supabase)\n\nADMIN: admin@v-gest.ao / admin123\n- Gerencia comerciantes\n- Dados na nuvem\n\nCLIENTE:\n- Cria conta → aguarda aprovação\n- Gerencia seus próprios dados\n\nSuporte: WhatsApp 954 289 109"));
 
     if (localStorage.getItem('dark') === 'dark') document.body.classList.add('dark');
     const savedUser = localStorage.getItem('currentUser');
     if (savedUser) {
         currentUser = JSON.parse(savedUser);
         document.getElementById('headerActions').style.display = 'flex';
-        renderMenu();
-        showDashboard();
+        renderMenu().then(() => showDashboard());
     } else showLogin();
 </script>
 </body>
