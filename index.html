@@ -1,15 +1,238 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt">
 <head>
     <meta charset="UTF-8">
-    <title>Teste V-Gest</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>V-Gest | Videira's Assessoria</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        :root {
+            --primary: #0B4F2F;
+            --gold: #C6A03E;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text: #1e293b;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 400px;
+            margin: 50px auto;
+            background: var(--card);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        h2 {
+            color: var(--primary);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 12px;
+            background: var(--card);
+        }
+
+        .btn-primary {
+            background: var(--gold);
+            color: var(--primary);
+            border: none;
+            padding: 12px;
+            border-radius: 40px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            font-size: 1rem;
+        }
+
+        .alert {
+            padding: 12px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+
+        .alert-success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .alert-error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 30px;
+            font-size: 0.7rem;
+            color: #64748b;
+        }
+
+        .whatsapp-float {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: #25D366;
+            color: white;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            text-decoration: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            z-index: 99;
+        }
+    </style>
 </head>
 <body>
-    <h1>Teste de Funcionamento</h1>
-    <p>Se estás a ver isto, o GitHub Pages está a funcionar!</p>
-    <p>Data e hora: <span id="data"></span></p>
+    <div class="container">
+        <h2>🔐 Entrar no V-Gest</h2>
+        <div id="loginMsg"></div>
+        <div class="form-group">
+            <label>Email ou Telefone</label>
+            <input type="text" id="loginUser" placeholder="email@exemplo.com">
+        </div>
+        <div class="form-group">
+            <label>Senha</label>
+            <input type="password" id="loginPass">
+        </div>
+        <button class="btn-primary" id="doLogin">Entrar</button>
+        <p style="margin-top: 16px; text-align: center;">
+            <a href="#" id="showReg">📝 Criar conta grátis</a>
+        </p>
+    </div>
+
+    <div id="regForm" style="display:none; max-width:400px; margin:20px auto; background: var(--card); padding:30px; border-radius:20px;">
+        <h2>📝 Criar Conta</h2>
+        <div id="regMsg"></div>
+        <div class="form-group"><label>Nome completo</label><input type="text" id="regNome"></div>
+        <div class="form-group"><label>Email</label><input type="email" id="regEmail"></div>
+        <div class="form-group"><label>Telefone</label><input type="tel" id="regTel"></div>
+        <div class="form-group"><label>Nome do negócio</label><input type="text" id="regNeg"></div>
+        <div class="form-group"><label>Senha</label><input type="password" id="regPass"></div>
+        <div class="form-group"><label>Confirmar Senha</label><input type="password" id="regPassConfirm"></div>
+        <button class="btn-primary" id="doReg">Registrar</button>
+        <p style="margin-top: 16px; text-align: center;"><a href="#" id="backLogin">← Voltar ao login</a></p>
+    </div>
+
+    <footer>
+        <p>© 2026 Videira's Assessoria Empresarial - V-Gest v1.0</p>
+        <p>📍 Luanda, Angola | 📱 @videira.assessoria</p>
+    </footer>
+    <a href="https://wa.me/244954289109?text=Olá! Vim do V-Gest" class="whatsapp-float" target="_blank">💬</a>
+
     <script>
-        document.getElementById('data').innerHTML = new Date().toLocaleString();
+        let users = JSON.parse(localStorage.getItem('vgest_users') || '[]');
+        let pending = JSON.parse(localStorage.getItem('vgest_pending') || '[]');
+        let currentUser = null;
+        const ADMIN_EMAIL = 'admin@v-gest.ao';
+        const ADMIN_PASS = 'admin123';
+
+        function showMessage(msg, type, targetId = 'loginMsg') {
+            const msgDiv = document.getElementById(targetId);
+            if (msgDiv) {
+                msgDiv.innerHTML = `<div class="alert alert-${type}">${msg}</div>`;
+                setTimeout(() => { msgDiv.innerHTML = ''; }, 4000);
+            }
+        }
+
+        function saveData() {
+            localStorage.setItem('vgest_users', JSON.stringify(users));
+            localStorage.setItem('vgest_pending', JSON.stringify(pending));
+        }
+
+        document.getElementById('doLogin')?.addEventListener('click', () => {
+            const userInput = document.getElementById('loginUser').value;
+            const pass = document.getElementById('loginPass').value;
+            if (userInput === ADMIN_EMAIL && pass === ADMIN_PASS) {
+                document.getElementById('loginMsg').innerHTML = '<div class="alert alert-success">✅ Login bem-sucedido! (Admin)</div>';
+            } else {
+                const user = users.find(u => u.email === userInput && u.senha === pass && u.aprovado === true);
+                if (user) {
+                    document.getElementById('loginMsg').innerHTML = '<div class="alert alert-success">✅ Login bem-sucedido! Bem-vindo ' + user.nome + '</div>';
+                } else {
+                    const pend = pending.find(p => p.email === userInput);
+                    if (pend) {
+                        document.getElementById('loginMsg').innerHTML = '<div class="alert alert-warning">⏳ Aguardando aprovação do administrador.</div>';
+                    } else {
+                        document.getElementById('loginMsg').innerHTML = '<div class="alert alert-error">❌ Email ou senha inválidos</div>';
+                    }
+                }
+            }
+        });
+
+        document.getElementById('showReg')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            document.querySelector('.container').style.display = 'none';
+            document.getElementById('regForm').style.display = 'block';
+        });
+
+        document.getElementById('backLogin')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            document.querySelector('.container').style.display = 'block';
+            document.getElementById('regForm').style.display = 'none';
+        });
+
+        document.getElementById('doReg')?.addEventListener('click', () => {
+            const nome = document.getElementById('regNome').value;
+            const email = document.getElementById('regEmail').value;
+            const tel = document.getElementById('regTel').value;
+            const neg = document.getElementById('regNeg').value;
+            const senha = document.getElementById('regPass').value;
+            const confirm = document.getElementById('regPassConfirm').value;
+
+            if (!nome || !email || !senha) {
+                document.getElementById('regMsg').innerHTML = '<div class="alert alert-error">Preencha todos os campos</div>';
+                return;
+            }
+            if (senha !== confirm) {
+                document.getElementById('regMsg').innerHTML = '<div class="alert alert-error">As senhas não coincidem</div>';
+                return;
+            }
+            if (users.find(u => u.email === email) || pending.find(p => p.email === email)) {
+                document.getElementById('regMsg').innerHTML = '<div class="alert alert-error">Email já registado</div>';
+                return;
+            }
+
+            pending.push({ nome, email, telefone: tel, negocio: neg, senha });
+            saveData();
+            document.getElementById('regMsg').innerHTML = '<div class="alert alert-success">✅ Cadastro realizado! Aguarde aprovação.</div>';
+            setTimeout(() => {
+                document.querySelector('.container').style.display = 'block';
+                document.getElementById('regForm').style.display = 'none';
+                document.getElementById('loginMsg').innerHTML = '<div class="alert alert-success">✅ Conta criada! Aguarde aprovação do administrador.</div>';
+            }, 3000);
+        });
     </script>
 </body>
 </html>
