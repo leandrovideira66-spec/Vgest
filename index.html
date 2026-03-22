@@ -721,4 +721,36 @@
         pending.splice(idx, 1);
         saveData();
         showAdminPanel();
-        showMessage('
+        showMessage('✅ Comerciante aprovado!', 'success', 'adminMsg');
+    };
+    window.rejectUser = (idx) => {
+        pending.splice(idx, 1);
+        saveData();
+        showAdminPanel();
+        showMessage('❌ Comerciante rejeitado.', 'warning', 'adminMsg');
+    };
+    window.deleteMerchant = (idx) => {
+        if (confirm('⚠️ Tem certeza?')) {
+            users.splice(idx, 1);
+            saveData();
+            showAdminPanel();
+            showMessage('🗑️ Comerciante excluído.', 'warning', 'adminMsg');
+        }
+    };
+
+    document.getElementById('menuBtn').addEventListener('click', () => { if (sidebar.classList.contains('open')) closeMenu(); else openMenu(); });
+    document.getElementById('overlay').addEventListener('click', closeMenu);
+    document.getElementById('darkBtn').addEventListener('click', () => { document.body.classList.toggle('dark'); localStorage.setItem('dark', document.body.classList.contains('dark') ? 'dark' : ''); });
+    document.getElementById('helpBtn').addEventListener('click', () => alert("📘 V-Gest v2.0\n\nADMIN: admin@v-gest.ao / admin123\n- Gerencia comerciantes\n\nCLIENTE:\n- Cria conta → aguarda aprovação\n- Gerencia faturas, clientes, produtos, contabilidade\n\nSuporte: WhatsApp 954 289 109"));
+
+    if (localStorage.getItem('dark') === 'dark') document.body.classList.add('dark');
+    const savedUser = localStorage.getItem('currentUser');
+    if (savedUser) {
+        currentUser = JSON.parse(savedUser);
+        document.getElementById('headerActions').style.display = 'flex';
+        renderMenu();
+        showDashboard();
+    } else showLogin();
+</script>
+</body>
+</html>
