@@ -202,17 +202,6 @@
             font-weight: 600;
         }
         tr:hover { background: rgba(198,160,62,0.05); }
-        
-        .editable {
-            cursor: pointer;
-            padding: 4px 8px;
-            border-radius: 4px;
-            border: 1px dashed transparent;
-        }
-        .editable:hover {
-            border-color: var(--gold);
-            background: rgba(198,160,62,0.1);
-        }
 
         .btn-primary {
             background: var(--gold);
@@ -245,6 +234,14 @@
             cursor: pointer;
             font-size: 0.8rem;
         }
+        .btn-warning {
+            background: var(--warning);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+        }
 
         .form-group { margin-bottom: 16px; position: relative; }
         .form-group label { display: block; margin-bottom: 6px; font-weight: 500; }
@@ -261,6 +258,7 @@
         .alert-success { background: #d1fae5; color: #065f46; }
         .alert-error { background: #fee2e2; color: #991b1b; }
         .alert-warning { background: #fef3c7; color: #92400e; }
+        .alert-info { background: #dbeafe; color: #1e40af; }
 
         .loading {
             position: fixed;
@@ -368,7 +366,7 @@
 const SUPABASE_URL = 'https://mjpdlsmgztaybqlbslwd.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qcGRsc21nenRheWJxbGJzbHdkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxODYxMDAsImV4cCI6MjA4OTc2MjEwMH0.4wnFn7fhs5QiYSVMnj3O4lnyXRR63cahGfxOqAtTJok';
 
-// ==================== GEMINI API (GRÁTIS) ====================
+// Gemini API Key
 const GEMINI_API_KEY = 'AIzaSyAlNisBaeL78_BMYGd_u2mRi9LsGf-N2tY';
 
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -383,228 +381,63 @@ const ADMIN_EMAIL = 'admin@v-gest.ao';
 const ADMIN_PASS = 'admin123';
 
 const PLANOS = {
-    basico: { nome: 'Básico', preco: 5000, periodo: 'mensal', features: { ia: false, relatorios: false, suporte: false, offline: 48 } },
-    premium: { nome: 'Premium', preco: 12000, periodo: 'mensal', features: { ia: true, relatorios: true, suporte: 'chat', offline: 72 } },
-    max: { nome: 'Max', preco: 20000, periodo: 'mensal', features: { ia: true, relatorios: true, suporte: 'prioritario', offline: 168, ocr: true } }
+    basico: { nome: 'Básico', preco: 5000, periodo: 'mensal', features: { ia: false, offline: 48 } },
+    premium: { nome: 'Premium', preco: 12000, periodo: 'mensal', features: { ia: true, offline: 72 } },
+    max: { nome: 'Max', preco: 20000, periodo: 'mensal', features: { ia: true, offline: 168 } }
 };
 
-// ==================== FUNÇÕES IA (GEMINI) ====================
+// ==================== FUNÇÕES IA ====================
 async function chamarGemini(prompt) {
-    if (!GEMINI_API_KEY) {
-        return "⚠️ IA não configurada. Contacte o administrador para ativar o assistente inteligente.";
-    }
-    
-    if (currentPlano === 'basico') {
-        return "🔒 Funcionalidade de IA disponível apenas nos planos Premium e Max. Faça upgrade para desbloquear!";
-    }
-    
+    if (!GEMINI_API_KEY) return "⚠️ IA não configurada.";
+    if (currentPlano === 'basico') return "🔒 Funcionalidade disponível nos planos Premium e Max.";
     try {
-        showLoading(true);
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: prompt }] }],
-                generationConfig: {
-                    temperature: 0.7,
-                    maxOutputTokens: 800,
-                }
-            })
+            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
         });
         const data = await response.json();
-        
-        if (data.error) {
-            console.error('Erro Gemini:', data.error);
-            return `❌ Erro: ${data.error.message || 'Serviço temporariamente indisponível'}`;
-        }
-        
-        const resposta = data.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (!resposta) {
-            return "🤖 Não consegui processar a solicitação. Tente novamente.";
-        }
-        return resposta;
+        return data.candidates?.[0]?.content?.parts?.[0]?.text || "Não consegui processar.";
     } catch (error) {
-        console.error('Erro ao chamar Gemini:', error);
-        return "⚠️ Erro de conexão com a IA. Tente novamente mais tarde.";
-    } finally {
-        showLoading(false);
+        return "Erro de conexão com a IA.";
     }
 }
 
-async function sugerirPrecoComIA(produtoNome, produtoAtual = null) {
-    const prompt = `Atue como um consultor de precificação para pequenos negócios em Angola.
-    
-Produto: "${produtoNome}"
-${produtoAtual ? `Preço atual: ${produtoAtual} Kz` : 'Sem preço definido'}
-
-Com base no mercado angolano, sugira um preço de venda ideal para este produto. Considere:
-- Margem de lucro adequada (mínimo 30%)
-- Preços praticados por concorrentes
-- Poder aquisitivo do consumidor angolano
-
-Responda de forma clara e objetiva, com o valor sugerido em Kz e uma breve justificativa.`;
-    
-    return await chamarGemini(prompt);
+async function sugerirPrecoComIA(produtoNome) {
+    return await chamarGemini(`Sugira um preço de venda para "${produtoNome}" no mercado angolano. Responda com o valor em Kz e uma breve justificativa.`);
 }
 
-async function analisarVendasComIA(dadosVendas) {
-    const prompt = `Atue como um consultor financeiro para pequenos negócios em Angola.
-    
-Dados de vendas:
-- Total de vendas: ${dadosVendas.totalVendas.toLocaleString()} Kz
-- Número de faturas: ${dadosVendas.numFaturas}
-- Valor médio por fatura: ${dadosVendas.mediaFatura.toLocaleString()} Kz
-- Produtos mais vendidos: ${dadosVendas.produtosTop?.join(', ') || 'Não disponível'}
-
-Com base nestes dados, forneça:
-1. Análise da saúde financeira do negócio
-2. 3 dicas práticas para aumentar as vendas
-3. Sugestão de estratégias de marketing para o mercado angolano
-
-Seja prático, objetivo e use linguagem simples.`;
-    
-    return await chamarGemini(prompt);
+async function analisarVendasComIA(dados) {
+    return await chamarGemini(`Analise estas vendas: Total ${dados.totalVendas} Kz, ${dados.numFaturas} faturas. Dê 3 dicas para aumentar vendas.`);
 }
 
-// ==================== VERIFICAÇÕES ====================
-async function isMerchantBlocked(merchantId) {
-    const { data } = await supabaseClient
-        .from('blocked_merchants')
-        .select('*')
-        .eq('merchant_id', merchantId)
-        .eq('ativo', true)
-        .single();
-    return data !== null;
+// ==================== FUNÇÕES SUPABASE ====================
+async function loadMerchantData() {
+    if (!currentUser || currentUser.isAdmin) return null;
+    const { data: merchant } = await supabaseClient.from('merchants').select('id').eq('email', currentUser.email).single();
+    if (!merchant) return null;
+    currentMerchantId = merchant.id;
+    const [customers, invoices, products] = await Promise.all([
+        supabaseClient.from('customers').select('*').eq('merchant_id', merchant.id),
+        supabaseClient.from('invoices').select('*').eq('merchant_id', merchant.id),
+        supabaseClient.from('products').select('*').eq('merchant_id', merchant.id)
+    ]);
+    return { customers: customers.data || [], invoices: invoices.data || [], products: products.data || [] };
 }
 
-async function getBlockedMerchants() {
-    const { data } = await supabaseClient
-        .from('blocked_merchants')
-        .select('*, merchants(nome, email, telefone, negocio)')
-        .eq('ativo', true);
-    return data || [];
+async function getMerchantsCount() {
+    const { count } = await supabaseClient.from('merchants').select('*', { count: 'exact', head: true });
+    return count || 0;
 }
 
-function showTermos() {
-    document.getElementById('headerActions').style.display = 'none';
-    document.getElementById('content').innerHTML = `
-        <div class="termos-container">
-            <h2><i class="fas fa-file-contract"></i> Termos e Condições de Uso</h2>
-            <p><strong>Última atualização:</strong> 23 de Março de 2026</p>
-            
-            <h3>1. Aceitação dos Termos</h3>
-            <p>Ao aceder e utilizar a plataforma V-Gest, o utilizador declara ter lido, compreendido e aceitado integralmente estes Termos e Condições.</p>
-            
-            <h3>2. Obrigações do Utilizador</h3>
-            <ul>
-                <li>Manter os dados da empresa atualizados (NIF, Alvará, Certidão Comercial)</li>
-                <li>Não utilizar a plataforma para atividades ilegais ou fraudulentas</li>
-                <li>Não partilhar credenciais de acesso com terceiros não autorizados</li>
-                <li>Não inserir informações falsas ou enganosas</li>
-                <li>Cumprir as leis fiscais angolanas</li>
-            </ul>
-            
-            <h3>3. Condutas Proibidas</h3>
-            <ul>
-                <li>Tentar aceder a dados de outros comerciantes sem autorização</li>
-                <li>Utilizar a plataforma para concorrência desleal</li>
-                <li>Manipular ou falsificar informações financeiras</li>
-            </ul>
-            
-            <h3>4. Bloqueio e Suspensão</h3>
-            <p>A Videira's Assessoria reserva-se o direito de suspender ou bloquear qualquer comerciante que:</p>
-            <ul>
-                <li>Violar qualquer uma das cláusulas deste regulamento</li>
-                <li>Estiver com NIF suspenso ou irregularidades fiscais</li>
-                <li>Utilizar o sistema para práticas fraudulentas</li>
-                <li>Não pagar a assinatura dentro do prazo estipulado</li>
-            </ul>
-            
-            <div style="margin-top: 30px; text-align: center;">
-                <button class="btn-primary" id="aceitarTermos"><i class="fas fa-check"></i> Aceito os Termos e Condições</button>
-                <button class="btn-danger" id="recusarTermos" style="margin-left: 10px;"><i class="fas fa-times"></i> Não Aceito (Sair)</button>
-            </div>
-        </div>
-    `;
-    
-    document.getElementById('aceitarTermos')?.addEventListener('click', async () => {
-        if (currentUser && !currentUser.isAdmin) {
-            await supabaseClient
-                .from('merchants')
-                .update({ termos_aceites: true, data_aceite_termos: new Date().toISOString() })
-                .eq('email', currentUser.email);
-        }
-        termoAceite = true;
-        localStorage.setItem('termosAceites', 'true');
-        document.getElementById('headerActions').style.display = 'flex';
-        renderMenu();
-        showDashboard();
-    });
-    
-    document.getElementById('recusarTermos')?.addEventListener('click', () => {
-        logout();
-    });
+async function getPendingCount() {
+    const { count } = await supabaseClient.from('pending').select('*', { count: 'exact', head: true });
+    return count || 0;
 }
 
-function verificarAcessoOffline() {
-    const ultimoLogin = localStorage.getItem('ultimoLogin');
-    const agora = Date.now();
-    const limiteHoras = currentPlano === 'basico' ? 48 : (currentPlano === 'premium' ? 72 : 168);
-    const limiteMs = limiteHoras * 60 * 60 * 1000;
-    
-    if (!navigator.onLine && ultimoLogin && (agora - parseInt(ultimoLogin)) > limiteMs) {
-        alert(`⚠️ Acesso offline expirado. Limite de ${limiteHoras}h sem internet. Conecte-se para renovar.`);
-        logout();
-        return false;
-    }
-    return true;
-}
-
-async function verificarAssinatura() {
-    if (!currentUser || currentUser.isAdmin) return true;
-    
-    const bloqueado = await isMerchantBlocked(currentMerchantId);
-    if (bloqueado) {
-        alert('❌ A sua conta foi bloqueada por violação dos Termos de Uso. Contacte o suporte.');
-        logout();
-        return false;
-    }
-    
-    const { data: assinatura } = await supabaseClient
-        .from('assinaturas')
-        .select('*')
-        .eq('merchant_id', currentMerchantId)
-        .eq('ativo', true)
-        .single();
-    
-    if (!assinatura) {
-        currentAssinatura = null;
-        currentPlano = null;
-        document.getElementById('planoBadge').innerHTML = '⚠️ Sem plano';
-        return false;
-    }
-    
-    currentAssinatura = assinatura;
-    currentPlano = assinatura.plano;
-    
-    const hoje = new Date();
-    const dataFim = new Date(assinatura.data_fim);
-    const diffDias = Math.ceil((dataFim - hoje) / (1000 * 60 * 60 * 24));
-    
-    document.getElementById('planoBadge').innerHTML = `${PLANOS[assinatura.plano].nome} | Expira em ${diffDias} dias`;
-    
-    if (diffDias <= 30 && diffDias > 0 && !localStorage.getItem(`aviso_${diffDias}_dias`)) {
-        showMessage(`⚠️ Seu plano ${PLANOS[assinatura.plano].nome} expira em ${diffDias} dias. Renove para continuar.`, 'warning');
-        localStorage.setItem(`aviso_${diffDias}_dias`, 'true');
-    }
-    
-    if (diffDias <= 0) {
-        alert('❌ Seu plano expirou. Contacte a Videira\'s para renovar.');
-        logout();
-        return false;
-    }
-    
-    return true;
+async function getBlockedCount() {
+    const { count } = await supabaseClient.from('blocked_merchants').select('*', { count: 'exact', head: true }).eq('ativo', true);
+    return count || 0;
 }
 
 function closeMenu() { sidebar.classList.remove('open'); overlay.classList.remove('active'); }
@@ -628,209 +461,31 @@ function showLoading(show) {
         loader.className = 'loading';
         loader.innerHTML = '<div class="spinner"></div>';
         document.body.appendChild(loader);
-    } else if (loader && !show) {
-        loader.remove();
-    }
+    } else if (loader && !show) loader.remove();
 }
 
 function showMessage(msg, type, targetId = 'loginMsg') {
-    const msgDiv = document.getElementById(targetId);
-    if (msgDiv) {
-        msgDiv.innerHTML = `<div class="alert alert-${type}">${msg}</div>`;
-        setTimeout(() => { msgDiv.innerHTML = ''; }, 4000);
-    } else {
-        alert(msg);
-    }
+    const div = document.getElementById(targetId);
+    if (div) { div.innerHTML = `<div class="alert alert-${type}">${msg}</div>`; setTimeout(() => div.innerHTML = '', 4000); }
+    else alert(msg);
 }
 
 function logout() {
     currentUser = null;
-    currentMerchantId = null;
-    currentPlano = null;
     localStorage.removeItem('currentUser');
-    localStorage.removeItem('ultimoLogin');
-    localStorage.removeItem('termosAceites');
     document.getElementById('headerActions').style.display = 'none';
     showLogin();
 }
 
-async function loadMerchantData() {
-    if (!currentUser || currentUser.isAdmin) return null;
-    const { data: merchant } = await supabaseClient
-        .from('merchants')
-        .select('id')
-        .eq('email', currentUser.email)
-        .single();
-    if (!merchant) return null;
-    currentMerchantId = merchant.id;
-    
-    const [customers, invoices, products] = await Promise.all([
-        supabaseClient.from('customers').select('*').eq('merchant_id', merchant.id),
-        supabaseClient.from('invoices').select('*').eq('merchant_id', merchant.id),
-        supabaseClient.from('products').select('*').eq('merchant_id', merchant.id)
-    ]);
-    
-    return {
-        merchantId: merchant.id,
-        customers: customers.data || [],
-        invoices: invoices.data || [],
-        products: products.data || []
-    };
-}
-
-async function getPendingCount() {
-    const { count } = await supabaseClient.from('pending').select('*', { count: 'exact', head: true });
-    return count || 0;
-}
-
-async function getMerchantsCount() {
-    const { count } = await supabaseClient.from('merchants').select('*', { count: 'exact', head: true });
-    return count || 0;
-}
-
-async function updatePassword(email, newPassword) {
-    const { error } = await supabaseClient
-        .from('merchants')
-        .update({ senha: newPassword })
-        .eq('email', email);
-    return !error;
-}
-
-async function findUserByEmailOrPhone(identifier) {
-    let { data: user } = await supabaseClient
-        .from('merchants')
-        .select('*')
-        .eq('email', identifier)
-        .single();
-    if (!user) {
-        const { data: userByPhone } = await supabaseClient
-            .from('merchants')
-            .select('*')
-            .eq('telefone', identifier)
-            .single();
-        user = userByPhone;
-    }
-    return user;
-}
-
-async function isClienteVideira(nome, email, telefone, empresa) {
-    let { data: cliente } = await supabaseClient
-        .from('clientes_videira')
-        .select('*')
-        .eq('nome', nome)
-        .eq('email', email)
-        .single();
-    
-    if (!cliente && telefone) {
-        const { data: clienteByPhone } = await supabaseClient
-            .from('clientes_videira')
-            .select('*')
-            .eq('telefone', telefone)
-            .single();
-        cliente = clienteByPhone;
-    }
-    
-    if (!cliente && empresa) {
-        const { data: clienteByEmpresa } = await supabaseClient
-            .from('clientes_videira')
-            .select('*')
-            .eq('nome_empresa', empresa)
-            .single();
-        cliente = clienteByEmpresa;
-    }
-    
-    return cliente !== null;
-}
-
-async function mostrarPlanos() {
-    document.getElementById('content').innerHTML = `
-        <h2><i class="fas fa-crown"></i> Escolha o seu Plano</h2>
-        <div class="dashboard-grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
-            <div class="card">
-                <h3>Básico</h3>
-                <div class="value">5.000 Kz <small>/mês</small></div>
-                <ul style="margin-top:15px; list-style:none;">
-                    <li><i class="fas fa-check"></i> Faturas ilimitadas</li>
-                    <li><i class="fas fa-check"></i> Gestão de clientes</li>
-                    <li><i class="fas fa-times"></i> IA Assistente</li>
-                    <li><i class="fas fa-check"></i> Offline: 48h</li>
-                </ul>
-                <button class="btn-primary" onclick="assinarPlano('basico')" style="width:100%; margin-top:15px;">Assinar</button>
-            </div>
-            <div class="card" style="border:2px solid var(--gold);">
-                <h3>Premium <span style="font-size:0.7rem;">⭐ Recomendado</span></h3>
-                <div class="value">12.000 Kz <small>/mês</small></div>
-                <ul style="margin-top:15px; list-style:none;">
-                    <li><i class="fas fa-check"></i> Tudo do Básico</li>
-                    <li><i class="fas fa-robot"></i> IA Assistente</li>
-                    <li><i class="fas fa-check"></i> Relatórios avançados</li>
-                    <li><i class="fas fa-check"></i> Offline: 72h</li>
-                </ul>
-                <button class="btn-primary" onclick="assinarPlano('premium')" style="width:100%; margin-top:15px;">Assinar</button>
-            </div>
-            <div class="card">
-                <h3>Max</h3>
-                <div class="value">20.000 Kz <small>/mês</small></div>
-                <ul style="margin-top:15px; list-style:none;">
-                    <li><i class="fas fa-check"></i> Tudo do Premium</li>
-                    <li><i class="fas fa-file-alt"></i> Análise de documentos</li>
-                    <li><i class="fas fa-chart-line"></i> Previsão de vendas</li>
-                    <li><i class="fas fa-check"></i> Offline: 7 dias</li>
-                </ul>
-                <button class="btn-primary" onclick="assinarPlano('max')" style="width:100%; margin-top:15px;">Assinar</button>
-            </div>
-        </div>
-        <p style="text-align:center; margin-top:20px;"><i class="fas fa-info-circle"></i> Teste grátis de 30 dias disponível!</p>
-    `;
-}
-
-async function assinarPlano(plano) {
-    const hoje = new Date();
-    const dataFim = new Date();
-    dataFim.setMonth(dataFim.getMonth() + 1);
-    
-    const { data: existing } = await supabaseClient
-        .from('assinaturas')
-        .select('*')
-        .eq('merchant_id', currentMerchantId)
-        .eq('ativo', true)
-        .single();
-    
-    if (existing) {
-        await supabaseClient
-            .from('assinaturas')
-            .update({ ativo: false })
-            .eq('id', existing.id);
-    }
-    
-    const { error } = await supabaseClient
-        .from('assinaturas')
-        .insert([{
-            merchant_id: currentMerchantId,
-            plano: plano,
-            data_inicio: hoje.toISOString().split('T')[0],
-            data_fim: dataFim.toISOString().split('T')[0],
-            ativo: true
-        }]);
-    
-    if (error) {
-        showMessage('Erro ao assinar plano. Tente novamente.', 'error');
-    } else {
-        showMessage(`✅ Plano ${PLANOS[plano].nome} assinado com sucesso!`, 'success');
-        currentPlano = plano;
-        await verificarAssinatura();
-        showDashboard();
-    }
-}
-
+// ==================== MENU ====================
 async function renderMenu() {
     if (!currentUser) return;
     let html = '';
     if (currentUser.isAdmin) {
         const pendingCount = await getPendingCount();
-        const blockedCount = (await getBlockedMerchants()).length;
-        html += `<button data-page="admin"><i class="fas fa-user-check"></i> Aprovar Comerciantes ${pendingCount > 0 ? `<span class="badge">${pendingCount}</span>` : ''}</button>`;
-        html += `<button data-page="bloqueados"><i class="fas fa-ban"></i> Bloqueados ${blockedCount > 0 ? `<span class="badge">${blockedCount}</span>` : ''}</button>`;
+        const blockedCount = await getBlockedCount();
+        html += `<button data-page="admin"><i class="fas fa-user-check"></i> Aprovar Comerciantes${pendingCount > 0 ? `<span class="badge">${pendingCount}</span>` : ''}</button>`;
+        html += `<button data-page="bloqueados"><i class="fas fa-ban"></i> Bloqueados${blockedCount > 0 ? `<span class="badge">${blockedCount}</span>` : ''}</button>`;
         html += `<button data-page="dashboard"><i class="fas fa-chart-line"></i> Dashboard Admin</button>`;
         html += `<button data-page="relatorios"><i class="fas fa-file-alt"></i> Relatórios</button>`;
         html += `<button data-page="planos"><i class="fas fa-crown"></i> Planos</button>`;
@@ -856,19 +511,6 @@ async function renderMenu() {
 
 async function showPage(page) {
     if (!currentUser) { showLogin(); return; }
-    
-    if (!currentUser.isAdmin && !termoAceite && !localStorage.getItem('termosAceites')) {
-        showTermos();
-        return;
-    }
-    
-    if (!verificarAcessoOffline()) return;
-    
-    if (!currentUser.isAdmin && !await verificarAssinatura()) {
-        mostrarPlanos();
-        return;
-    }
-    
     closeMenu();
     if (page === 'dashboard') showDashboard();
     else if (page === 'faturas') showFaturas();
@@ -882,211 +524,77 @@ async function showPage(page) {
     else if (page === 'ia') showIAAssistente();
     else if (page === 'config') showConfig();
     else if (page === 'logout') logout();
-
     document.querySelectorAll('.sidebar-nav button').forEach(btn => {
         if (btn.dataset.page === page) btn.classList.add('active');
         else btn.classList.remove('active');
     });
 }
 
-async function showIAAssistente() {
-    const data = await loadMerchantData();
-    const vendas = data?.invoices || [];
-    const totalVendas = vendas.reduce((s,i) => s + (i.pago ? i.valor : 0), 0);
-    
-    document.getElementById('content').innerHTML = `
-        <h2><i class="fas fa-robot"></i> Assistente IA (Gemini)</h2>
-        <p style="margin-bottom: 20px;">Assistente inteligente para ajudar no seu negócio. Disponível nos planos <strong>Premium</strong> e <strong>Max</strong>.</p>
-        
-        <div class="dashboard-grid" style="grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));">
-            <div class="card">
-                <h3><i class="fas fa-tag"></i> Sugestão de Preço</h3>
-                <div class="form-group" style="margin: 15px 0;">
-                    <label>Produto</label>
-                    <input type="text" id="iaProdutoNome" placeholder="Ex: Cadeira de Escritório" style="width:100%;">
-                </div>
-                <button class="btn-primary" onclick="sugerirPreco()" style="width:100%;"><i class="fas fa-chart-line"></i> Sugerir Preço</button>
-                <div id="iaPrecoResposta" style="margin-top: 15px; font-size: 0.9rem;"></div>
-            </div>
-            
-            <div class="card">
-                <h3><i class="fas fa-chart-pie"></i> Análise de Vendas</h3>
-                <p style="font-size: 0.8rem; margin: 10px 0;">Vendas totais: <strong>${totalVendas.toLocaleString()} Kz</strong><br>Nº faturas: <strong>${vendas.length}</strong></p>
-                <button class="btn-primary" onclick="analisarVendas()" style="width:100%;"><i class="fas fa-chart-line"></i> Analisar Vendas</button>
-                <div id="iaVendasResposta" style="margin-top: 15px; font-size: 0.9rem;"></div>
-            </div>
-            
-            ${currentPlano === 'max' ? `
-            <div class="card">
-                <h3><i class="fas fa-chart-line"></i> Previsão de Vendas</h3>
-                <button class="btn-primary" onclick="preverVendas()" style="width:100%;"><i class="fas fa-chart-line"></i> Prever Vendas</button>
-                <div id="iaPrevisaoResposta" style="margin-top: 15px; font-size: 0.9rem;"></div>
-            </div>
-            
-            <div class="card">
-                <h3><i class="fas fa-file-alt"></i> Análise de Documento</h3>
-                <div class="form-group" style="margin: 15px 0;">
-                    <label>Texto do Documento</label>
-                    <textarea id="iaDocumentoTexto" rows="3" placeholder="Cole o texto do alvará, certidão ou contrato..." style="width:100%;"></textarea>
-                </div>
-                <button class="btn-primary" onclick="analisarDocumento()" style="width:100%;"><i class="fas fa-file-alt"></i> Analisar Documento</button>
-                <div id="iaDocumentoResposta" style="margin-top: 15px; font-size: 0.9rem;"></div>
-            </div>
-            ` : `
-            <div class="card">
-                <h3><i class="fas fa-star"></i> Upgrade para Max</h3>
-                <p>Funcionalidades exclusivas do plano Max:</p>
-                <ul style="margin: 10px 0 15px 20px;">
-                    <li>📄 Análise de documentos</li>
-                    <li>📈 Previsão de vendas</li>
-                </ul>
-                <button class="btn-primary" onclick="mostrarPlanos()" style="width:100%;"><i class="fas fa-crown"></i> Fazer Upgrade</button>
-            </div>
-            `}
-        </div>
-    `;
-}
-
-window.sugerirPreco = async () => {
-    const produto = document.getElementById('iaProdutoNome').value;
-    if (!produto) {
-        document.getElementById('iaPrecoResposta').innerHTML = '<span style="color:var(--warning);">⚠️ Digite o nome do produto</span>';
-        return;
-    }
-    document.getElementById('iaPrecoResposta').innerHTML = '<i class="fas fa-spinner fa-spin"></i> A IA está a pensar...';
-    const resposta = await sugerirPrecoComIA(produto);
-    document.getElementById('iaPrecoResposta').innerHTML = resposta;
-};
-
-window.analisarVendas = async () => {
-    const data = await loadMerchantData();
-    const vendas = data?.invoices || [];
-    const totalVendas = vendas.reduce((s,i) => s + (i.pago ? i.valor : 0), 0);
-    const produtosTop = data?.products?.slice(0, 3).map(p => p.nome) || [];
-    
-    const dadosVendas = {
-        totalVendas: totalVendas,
-        numFaturas: vendas.length,
-        mediaFatura: vendas.length > 0 ? totalVendas / vendas.length : 0,
-        produtosTop: produtosTop
-    };
-    
-    document.getElementById('iaVendasResposta').innerHTML = '<i class="fas fa-spinner fa-spin"></i> A IA está a analisar...';
-    const resposta = await analisarVendasComIA(dadosVendas);
-    document.getElementById('iaVendasResposta').innerHTML = resposta;
-};
-
-window.preverVendas = async () => {
-    const data = await loadMerchantData();
-    const vendas = data?.invoices || [];
-    const vendasPorMes = {};
-    vendas.forEach(inv => {
-        if (inv.pago) {
-            const mes = inv.data.slice(0, 7);
-            vendasPorMes[mes] = (vendasPorMes[mes] || 0) + inv.valor;
-        }
-    });
-    
-    const meses = Object.keys(vendasPorMes).sort().slice(-6);
-    const historico = meses.map(mes => ({ mes, valor: vendasPorMes[mes] }));
-    
-    if (historico.length === 0) {
-        document.getElementById('iaPrevisaoResposta').innerHTML = '<span style="color:var(--warning);">⚠️ Sem dados suficientes para previsão</span>';
-        return;
-    }
-    
-    document.getElementById('iaPrevisaoResposta').innerHTML = '<i class="fas fa-spinner fa-spin"></i> A IA está a calcular...';
-    const resposta = await chamarGemini(`Preveja vendas para os próximos 3 meses baseado no histórico: ${JSON.stringify(historico)}`);
-    document.getElementById('iaPrevisaoResposta').innerHTML = resposta;
-};
-
-window.analisarDocumento = async () => {
-    const texto = document.getElementById('iaDocumentoTexto').value;
-    if (!texto) {
-        document.getElementById('iaDocumentoResposta').innerHTML = '<span style="color:var(--warning);">⚠️ Cole o texto do documento</span>';
-        return;
-    }
-    document.getElementById('iaDocumentoResposta').innerHTML = '<i class="fas fa-spinner fa-spin"></i> A IA está a analisar...';
-    const resposta = await chamarGemini(`Analise este documento e extraia informações importantes (tipo, empresa, NIF, datas): ${texto.substring(0, 1500)}`);
-    document.getElementById('iaDocumentoResposta').innerHTML = resposta;
-};
-
+// ==================== DASHBOARD ====================
 async function showDashboard() {
     if (currentUser.isAdmin) {
-        const totalComerciantes = await getMerchantsCount();
+        const total = await getMerchantsCount();
         const pendentes = await getPendingCount();
-        const blocked = await getBlockedMerchants();
+        const blocked = await getBlockedCount();
         document.getElementById('content').innerHTML = `
             <h2><i class="fas fa-chart-line"></i> Dashboard Administrativo</h2>
             <div class="dashboard-grid">
-                <div class="card"><h3>Comerciantes Ativos</h3><div class="value">${totalComerciantes}</div></div>
-                <div class="card"><h3>Solicitações Pendentes</h3><div class="value">${pendentes}</div></div>
-                <div class="card"><h3>Comerciantes Bloqueados</h3><div class="value">${blocked.length}</div></div>
+                <div class="card"><h3>COMERCIANTES ATIVOS</h3><div class="value">${total}</div></div>
+                <div class="card"><h3>SOLICITAÇÕES PENDENTES</h3><div class="value">${pendentes}</div></div>
+                <div class="card"><h3>COMERCIANTES BLOQUEADOS</h3><div class="value">${blocked}</div></div>
             </div>
         `;
     } else {
         const data = await loadMerchantData();
         const totalVendas = data?.invoices?.filter(i => i.pago).reduce((s,i) => s + i.valor, 0) || 0;
-        const pendentes = data?.invoices?.filter(i => !i.pago).reduce((s,i) => s + i.valor, 0) || 0;
         const totalClientes = data?.customers?.length || 0;
-        
         document.getElementById('content').innerHTML = `
             <h2><i class="fas fa-chart-line"></i> Dashboard - ${currentUser.name}</h2>
             <div class="dashboard-grid">
-                <div class="card"><h3>VENDAS DO MÊS</h3><div class="value">${totalVendas.toLocaleString()} Kz</div></div>
-                <div class="card"><h3>FATURAS PENDENTES</h3><div class="value">${pendentes.toLocaleString()} Kz</div></div>
-                <div class="card"><h3>MEUS CLIENTES</h3><div class="value">${totalClientes}</div></div>
+                <div class="card"><h3>VENDAS</h3><div class="value">${totalVendas.toLocaleString()} Kz</div></div>
+                <div class="card"><h3>CLIENTES</h3><div class="value">${totalClientes}</div></div>
             </div>
-            <div class="card"><h3><i class="fas fa-calendar-alt"></i> Próximo Vencimento Fiscal</h3><p>IVA - Dia 15 (faltam 4 dias)</p></div>
+            <div class="card"><h3><i class="fas fa-calendar-alt"></i> Próximo Vencimento</h3><p>IVA - Dia 15</p></div>
         `;
     }
 }
 
+// ==================== FATURAS ====================
 async function showFaturas() {
     const data = await loadMerchantData();
     document.getElementById('content').innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
-            <h2><i class="fas fa-file-invoice-dollar"></i> Minhas Faturas</h2>
-            <button class="btn-primary" onclick="novaFatura()"><i class="fas fa-plus"></i> Nova Fatura</button>
-            <button class="btn-secondary" onclick="exportarFaturasCSV()"><i class="fas fa-file-excel"></i> Exportar CSV</button>
-        </div>
+        <h2><i class="fas fa-file-invoice-dollar"></i> Minhas Faturas</h2>
+        <button class="btn-primary" onclick="novaFatura()"><i class="fas fa-plus"></i> Nova Fatura</button>
         <div class="table-wrapper">
-            <table id="faturasTable">
-                <thead> <th>Cliente</th><th>Valor (Kz)</th><th>Data</th><th>Status</th><th>Ações</th> </thead>
+            <table>
+                <thead><tr><th>Cliente</th><th>Valor (Kz)</th><th>Data</th><th>Status</th><th>Ações</th></tr></thead>
                 <tbody id="faturasBody"></tbody>
-            没人
+            </table>
         </div>
     `;
-    
     const tbody = document.getElementById('faturasBody');
-    if (!data?.invoices || data.invoices.length === 0) {
-        tbody.innerHTML = '§<td colspan="5">Nenhuma fatura registada.§</td>';
-        return;
-    }
-    
+    if (!data?.invoices?.length) { tbody.innerHTML = '<tr><td colspan="5">Nenhuma fatura registada.</td></tr>'; return; }
     tbody.innerHTML = data.invoices.map(inv => `
-         <tr>
-            <td class="editable" contenteditable="true" onblur="editarFatura(${inv.id}, 'cliente', this.innerText)">${inv.cliente}</td>
-            <td class="editable" contenteditable="true" onblur="editarFatura(${inv.id}, 'valor', parseFloat(this.innerText))">${inv.valor.toLocaleString()} Kz</td>
+        <tr>
+            <td>${inv.cliente}</td>
+            <td>${inv.valor.toLocaleString()} Kz</td>
             <td>${inv.data}</td>
             <td><span style="background:${inv.pago ? '#c8e6c9' : '#ffecb3'}; padding:4px 8px; border-radius:20px;">${inv.pago ? '✅ Pago' : '⏳ Pendente'}</span></td>
-            <td>
-                <button class="btn-primary" onclick="togglePagoFatura(${inv.id}, ${!inv.pago})"><i class="fas fa-check"></i> ${inv.pago ? 'Pendente' : 'Pago'}</button>
-                <button class="btn-danger" onclick="deleteFatura(${inv.id})"><i class="fas fa-trash"></i></button>
-            </td>
-         </tr>
+            <td><button class="btn-primary" onclick="togglePagoFatura('${inv.id}', ${!inv.pago})">${inv.pago ? 'Pendente' : 'Pago'}</button>
+            <button class="btn-danger" onclick="deleteFatura('${inv.id}')">Excluir</button></td>
+        </tr>
     `).join('');
 }
 
 window.novaFatura = () => {
     document.getElementById('content').innerHTML = `
-        <h2><i class="fas fa-plus-circle"></i> Nova Fatura</h2>
+        <h2>➕ Nova Fatura</h2>
         <div style="max-width: 400px;">
             <div class="form-group"><label>Cliente</label><input id="fatCliente"></div>
             <div class="form-group"><label>Valor (Kz)</label><input id="fatValor" type="number"></div>
             <div class="form-group"><label>Data</label><input id="fatData" type="date" value="${new Date().toISOString().split('T')[0]}"></div>
-            <button class="btn-primary" onclick="salvarFatura()"><i class="fas fa-save"></i> Salvar</button>
-            <button class="btn-secondary" onclick="showFaturas()"><i class="fas fa-arrow-left"></i> Cancelar</button>
+            <button class="btn-primary" onclick="salvarFatura()">Salvar</button>
+            <button class="btn-secondary" onclick="showFaturas()">Cancelar</button>
         </div>
     `;
 };
@@ -1095,7 +603,7 @@ window.salvarFatura = async () => {
     const cliente = document.getElementById('fatCliente').value;
     const valor = parseFloat(document.getElementById('fatValor').value);
     const data = document.getElementById('fatData').value;
-    if (!cliente || !valor) return alert('Preencha cliente e valor');
+    if (!cliente || !valor) return alert('Preencha os dados');
     await supabaseClient.from('invoices').insert([{ merchant_id: currentMerchantId, cliente, valor, data, pago: false }]);
     showFaturas();
 };
@@ -1106,424 +614,259 @@ window.togglePagoFatura = async (id, pago) => {
 };
 
 window.deleteFatura = async (id) => {
-    if (confirm('Tem certeza?')) {
-        await supabaseClient.from('invoices').delete().eq('id', id);
-        showFaturas();
-    }
-};
-
-window.editarFatura = async (id, campo, valor) => {
-    await supabaseClient.from('invoices').update({ [campo]: valor }).eq('id', id);
+    if (confirm('Tem certeza?')) await supabaseClient.from('invoices').delete().eq('id', id);
     showFaturas();
 };
 
-window.exportarFaturasCSV = async () => {
-    const data = await loadMerchantData();
-    if (!data?.invoices || data.invoices.length === 0) return alert('Sem dados para exportar');
-    
-    let csv = "Cliente,Valor,Data,Status\n";
-    data.invoices.forEach(inv => {
-        csv += `"${inv.cliente}",${inv.valor},"${inv.data}",${inv.pago ? 'Pago' : 'Pendente'}\n`;
-    });
-    
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `faturas_${new Date().toISOString().slice(0,10)}.csv`;
-    link.click();
-};
-
+// ==================== CLIENTES ====================
 async function showClientes() {
     const data = await loadMerchantData();
     document.getElementById('content').innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <h2><i class="fas fa-users"></i> Meus Clientes</h2>
-            <button class="btn-primary" onclick="novoCliente()"><i class="fas fa-plus"></i> Novo Cliente</button>
-        </div>
+        <h2><i class="fas fa-users"></i> Meus Clientes</h2>
+        <button class="btn-primary" onclick="novoCliente()"><i class="fas fa-plus"></i> Novo Cliente</button>
         <div class="table-wrapper">
             <table>
-                <thead> <th>Nome</th><th>Email</th><th>Telefone</th><th>Ações</th> </thead>
+                <thead><tr><th>Nome</th><th>Email</th><th>Telefone</th><th>Ações</th></tr></thead>
                 <tbody id="clientesBody"></tbody>
             </table>
         </div>
     `;
-    
     const tbody = document.getElementById('clientesBody');
-    if (!data?.customers || data.customers.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4">Nenhum cliente cadastrado.</td></tr>';
-        return;
-    }
-    
+    if (!data?.customers?.length) { tbody.innerHTML = '<tr><td colspan="4">Nenhum cliente cadastrado.</td></tr>'; return; }
     tbody.innerHTML = data.customers.map(c => `
-        <tr>
-            <td class="editable" contenteditable="true" onblur="editarCliente(${c.id}, 'nome', this.innerText)">${c.nome}</td>
-            <td class="editable" contenteditable="true" onblur="editarCliente(${c.id}, 'email', this.innerText)">${c.email || '-'}</td>
-            <td class="editable" contenteditable="true" onblur="editarCliente(${c.id}, 'telefone', this.innerText)">${c.telefone || '-'}</td>
-            <td><button class="btn-danger" onclick="deleteCliente(${c.id})"><i class="fas fa-trash"></i> Remover</button></td>
-        </tr>
+        <tr><td>${c.nome}</td><td>${c.email || '-'}</td><td>${c.telefone || '-'}</td>
+        <td><button class="btn-danger" onclick="deleteCliente('${c.id}')">Excluir</button></td></tr>
     `).join('');
 }
 
 window.novoCliente = () => {
     document.getElementById('content').innerHTML = `
-        <h2><i class="fas fa-user-plus"></i> Novo Cliente</h2>
+        <h2>➕ Novo Cliente</h2>
         <div style="max-width: 400px;">
             <div class="form-group"><label>Nome</label><input id="cliNome"></div>
             <div class="form-group"><label>Email</label><input id="cliEmail"></div>
             <div class="form-group"><label>Telefone</label><input id="cliTel"></div>
-            <button class="btn-primary" onclick="salvarCliente()"><i class="fas fa-save"></i> Salvar</button>
-            <button class="btn-secondary" onclick="showClientes()"><i class="fas fa-arrow-left"></i> Cancelar</button>
+            <button class="btn-primary" onclick="salvarCliente()">Salvar</button>
+            <button class="btn-secondary" onclick="showClientes()">Cancelar</button>
         </div>
     `;
 };
 
 window.salvarCliente = async () => {
-    const nome = document.getElementById('cliNome').value;
-    const email = document.getElementById('cliEmail').value;
-    const tel = document.getElementById('cliTel').value;
+    const nome = document.getElementById('cliNome').value, email = document.getElementById('cliEmail').value, tel = document.getElementById('cliTel').value;
     if (!nome) return alert('Nome obrigatório');
     await supabaseClient.from('customers').insert([{ merchant_id: currentMerchantId, nome, email, telefone: tel }]);
     showClientes();
 };
 
-window.editarCliente = async (id, campo, valor) => {
-    await supabaseClient.from('customers').update({ [campo]: valor }).eq('id', id);
+window.deleteCliente = async (id) => {
+    if (confirm('Tem certeza?')) await supabaseClient.from('customers').delete().eq('id', id);
     showClientes();
 };
 
-window.deleteCliente = async (id) => {
-    if (confirm('Tem certeza?')) {
-        await supabaseClient.from('customers').delete().eq('id', id);
-        showClientes();
-    }
-};
-
+// ==================== PRODUTOS ====================
 async function showProdutos() {
     const data = await loadMerchantData();
     document.getElementById('content').innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <h2><i class="fas fa-boxes"></i> Meus Produtos</h2>
-            <button class="btn-primary" onclick="addProduto()"><i class="fas fa-plus"></i> Adicionar</button>
-            <button class="btn-secondary" onclick="sugerirPrecoParaProdutos()"><i class="fas fa-robot"></i> IA: Sugerir Preços</button>
-        </div>
+        <h2><i class="fas fa-boxes"></i> Meus Produtos</h2>
+        <button class="btn-primary" onclick="addProduto()"><i class="fas fa-plus"></i> Adicionar</button>
+        <button class="btn-secondary" onclick="sugerirPrecoProdutos()"><i class="fas fa-robot"></i> IA: Sugerir Preços</button>
         <div class="table-wrapper">
             <table>
-                <thead> <th>Produto</th><th>SKU</th><th>Preço (Kz)</th><th>Ações</th> </thead>
+                <thead><tr><th>Produto</th><th>Preço (Kz)</th><th>Ações</th></tr></thead>
                 <tbody id="produtosBody"></tbody>
             </table>
         </div>
     `;
-    
     const tbody = document.getElementById('produtosBody');
-    if (!data?.products || data.products.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4">Nenhum produto cadastrado.</td></tr>';
-        return;
-    }
-    
+    if (!data?.products?.length) { tbody.innerHTML = '<tr><td colspan="3">Nenhum produto cadastrado.</td></tr>'; return; }
     tbody.innerHTML = data.products.map(p => `
-        <tr>
-            <td class="editable" contenteditable="true" onblur="editarProduto(${p.id}, 'nome', this.innerText)">${p.nome}</td>
-            <td class="editable" contenteditable="true" onblur="editarProduto(${p.id}, 'sku', this.innerText)">${p.sku || '-'}</td>
-            <td class="editable" contenteditable="true" onblur="editarProduto(${p.id}, 'preco', parseFloat(this.innerText))">${p.preco.toLocaleString()} Kz</td>
-            <td><button class="btn-danger" onclick="deleteProduto(${p.id})"><i class="fas fa-trash"></i> Remover</button></td>
-        </tr>
+        <tr><td>${p.nome}</td><td>${p.preco.toLocaleString()} Kz</td>
+        <td><button class="btn-danger" onclick="deleteProduto('${p.id}')">Excluir</button></td></tr>
     `).join('');
 }
 
-window.sugerirPrecoParaProdutos = async () => {
-    const data = await loadMerchantData();
-    if (!data?.products || data.products.length === 0) {
-        alert('Nenhum produto cadastrado para sugerir preços.');
-        return;
-    }
-    
-    const produto = data.products[0];
-    document.getElementById('produtosBody').innerHTML = '<tr><td colspan="4"><i class="fas fa-spinner fa-spin"></i> IA a analisar...</td></tr>';
-    
-    const sugestao = await sugerirPrecoComIA(produto.nome, produto.preco);
-    alert(`💡 Sugestão de preço para ${produto.nome}:\n\n${sugestao}`);
-    showProdutos();
-};
-
 window.addProduto = () => {
     document.getElementById('content').innerHTML = `
-        <h2><i class="fas fa-plus-circle"></i> Novo Produto</h2>
+        <h2>➕ Novo Produto</h2>
         <div style="max-width: 400px;">
             <div class="form-group"><label>Produto</label><input id="prodNome"></div>
-            <div class="form-group"><label>SKU</label><input id="prodSku"></div>
             <div class="form-group"><label>Preço (Kz)</label><input id="prodPreco" type="number"></div>
-            <button class="btn-primary" onclick="salvarProduto()"><i class="fas fa-save"></i> Salvar</button>
-            <button class="btn-secondary" onclick="showProdutos()"><i class="fas fa-arrow-left"></i> Cancelar</button>
+            <button class="btn-primary" onclick="salvarProduto()">Salvar</button>
+            <button class="btn-secondary" onclick="showProdutos()">Cancelar</button>
         </div>
     `;
 };
 
 window.salvarProduto = async () => {
-    const nome = document.getElementById('prodNome').value;
-    const sku = document.getElementById('prodSku').value;
-    const preco = parseFloat(document.getElementById('prodPreco').value);
+    const nome = document.getElementById('prodNome').value, preco = parseFloat(document.getElementById('prodPreco').value);
     if (!nome) return alert('Nome obrigatório');
-    await supabaseClient.from('products').insert([{ merchant_id: currentMerchantId, nome, sku, preco }]);
-    showProdutos();
-};
-
-window.editarProduto = async (id, campo, valor) => {
-    await supabaseClient.from('products').update({ [campo]: valor }).eq('id', id);
+    await supabaseClient.from('products').insert([{ merchant_id: currentMerchantId, nome, preco }]);
     showProdutos();
 };
 
 window.deleteProduto = async (id) => {
-    if (confirm('Tem certeza?')) {
-        await supabaseClient.from('products').delete().eq('id', id);
-        showProdutos();
-    }
+    if (confirm('Tem certeza?')) await supabaseClient.from('products').delete().eq('id', id);
+    showProdutos();
 };
 
+window.sugerirPrecoProdutos = async () => {
+    const data = await loadMerchantData();
+    if (!data?.products?.length) return alert('Nenhum produto cadastrado');
+    showLoading(true);
+    const sugestao = await sugerirPrecoComIA(data.products[0].nome);
+    showLoading(false);
+    alert(`💡 Sugestão para ${data.products[0].nome}:\n\n${sugestao}`);
+};
+
+// ==================== CONTABILIDADE ====================
 async function showContabilidade() {
     const data = await loadMerchantData();
     const receitas = data?.invoices?.filter(i => i.pago).reduce((s,i) => s + i.valor, 0) || 0;
-    const despesas = receitas * 0.42;
-    const margem = receitas > 0 ? ((receitas - despesas) / receitas * 100).toFixed(0) : 0;
-    
     document.getElementById('content').innerHTML = `
-        <h2><i class="fas fa-chart-pie"></i> Minha Contabilidade</h2>
+        <h2><i class="fas fa-chart-pie"></i> Contabilidade</h2>
         <div class="dashboard-grid">
             <div class="card"><h3>RECEITAS</h3><div class="value">${receitas.toLocaleString()} Kz</div></div>
-            <div class="card"><h3>DESPESAS</h3><div class="value">${despesas.toLocaleString()} Kz</div></div>
-            <div class="card"><h3>MARGEM</h3><div class="value">${margem}%</div></div>
+            <div class="card"><h3>DESPESAS</h3><div class="value">${(receitas * 0.42).toLocaleString()} Kz</div></div>
+            <div class="card"><h3>MARGEM</h3><div class="value">${receitas > 0 ? 58 : 0}%</div></div>
         </div>
-        <button class="btn-secondary" onclick="analisarVendas()"><i class="fas fa-robot"></i> IA: Analisar Vendas</button>
-        <div id="iaAnaliseContabilidade" style="margin-top: 20px;"></div>
     `;
-    
-    window.analisarVendasContabilidade = async () => {
-        const dados = {
-            totalVendas: receitas,
-            numFaturas: data?.invoices?.length || 0,
-            mediaFatura: data?.invoices?.length ? receitas / data.invoices.length : 0,
-            produtosTop: data?.products?.slice(0, 3).map(p => p.nome) || []
-        };
-        document.getElementById('iaAnaliseContabilidade').innerHTML = '<i class="fas fa-spinner fa-spin"></i> IA a analisar...';
-        const resposta = await analisarVendasComIA(dados);
-        document.getElementById('iaAnaliseContabilidade').innerHTML = `<div class="card"><h3>🤖 Análise da IA</h3>${resposta}</div>`;
-    };
 }
 
+// ==================== RELATÓRIOS ====================
 async function showRelatorios() {
     if (currentUser.isAdmin) {
         const { data: merchants } = await supabaseClient.from('merchants').select('id, nome, negocio');
         const { data: allInvoices } = await supabaseClient.from('invoices').select('*');
-        
-        let relatorio = [];
-        if (merchants && allInvoices) {
-            relatorio = merchants.map(m => {
-                const faturas = allInvoices.filter(i => i.merchant_id === m.id);
-                const totalVendas = faturas.filter(i => i.pago).reduce((s,i) => s + i.valor, 0);
-                return { nome: m.nome, empresa: m.negocio || '—', totalVendas, numFaturas: faturas.length };
-            }).sort((a,b) => b.totalVendas - a.totalVendas);
-        }
+        const relatorio = merchants?.map(m => {
+            const faturas = allInvoices?.filter(i => i.merchant_id === m.id) || [];
+            const totalVendas = faturas.filter(i => i.pago).reduce((s,i) => s + i.valor, 0);
+            return { nome: m.nome, empresa: m.negocio || '—', totalVendas, numFaturas: faturas.length };
+        }).sort((a,b) => b.totalVendas - a.totalVendas) || [];
         
         document.getElementById('content').innerHTML = `
             <h2><i class="fas fa-file-alt"></i> Relatórios - Faturação por Comerciante</h2>
             <div class="table-wrapper">
                 <table>
-                    <thead> <th>Comerciante</th><th>Empresa</th><th>Total Vendas (Kz)</th><th>Nº Faturas</th> </thead>
-                    <tbody>
-                        ${relatorio.map(r => `<tr><td>${r.nome}</td><td>${r.empresa}</td><td>${r.totalVendas.toLocaleString()}</td><td>${r.numFaturas}</td></tr>`).join('')}
-                        ${relatorio.length === 0 ? '<tr><td colspan="4">Nenhum dado disponível</td></tr>' : ''}
-                    </tbody>
+                    <thead><tr><th>Comerciante</th><th>Empresa</th><th>Total Vendas (Kz)</th><th>Nº Faturas</th></tr></thead>
+                    <tbody>${relatorio.map(r => `<tr><td>${r.nome}</td><td>${r.empresa}</td><td>${r.totalVendas.toLocaleString()}</td><td>${r.numFaturas}</td></tr>`).join('')}</tbody>
                 </table>
             </div>
-            <button class="btn-primary" onclick="exportarRelatorioAdmin()"><i class="fas fa-file-excel"></i> Exportar Relatório</button>
         `;
     } else {
         const data = await loadMerchantData();
-        const vendasPorMes = {};
-        data?.invoices?.forEach(inv => {
-            const mes = inv.data.slice(0,7);
-            vendasPorMes[mes] = (vendasPorMes[mes] || 0) + (inv.pago ? inv.valor : 0);
-        });
-        
-        const labels = Object.keys(vendasPorMes).sort();
-        const valores = labels.map(l => vendasPorMes[l]);
-        
         document.getElementById('content').innerHTML = `
             <h2><i class="fas fa-chart-line"></i> Relatórios - Minhas Vendas</h2>
-            <div class="chart-container" style="height: 300px;">
-                <canvas id="relatorioChart"></canvas>
-            </div>
-            <button class="btn-primary" onclick="exportarRelatorioCliente()"><i class="fas fa-file-excel"></i> Exportar Relatório</button>
+            <div class="card"><p>Total de vendas: ${data?.invoices?.filter(i => i.pago).reduce((s,i) => s + i.valor, 0).toLocaleString()} Kz</p>
+            <p>Número de faturas: ${data?.invoices?.length || 0}</p></div>
         `;
-        
-        const ctx = document.getElementById('relatorioChart')?.getContext('2d');
-        if (ctx && labels.length > 0) {
-            new Chart(ctx, {
-                type: 'line',
-                data: { labels, datasets: [{ label: 'Vendas (Kz)', data: valores, borderColor: '#C6A03E', fill: true }] },
-                options: { responsive: true, maintainAspectRatio: false }
-            });
-        }
     }
 }
 
-window.exportarRelatorioAdmin = async () => {
-    const { data: merchants } = await supabaseClient.from('merchants').select('id, nome, negocio');
-    const { data: allInvoices } = await supabaseClient.from('invoices').select('*');
-    
-    let csv = "Comerciante,Empresa,Total Vendas (Kz),Nº Faturas\n";
-    merchants?.forEach(m => {
-        const faturas = allInvoices?.filter(i => i.merchant_id === m.id) || [];
-        const totalVendas = faturas.filter(i => i.pago).reduce((s,i) => s + i.valor, 0);
-        csv += `"${m.nome}","${m.negocio || '-'}",${totalVendas},${faturas.length}\n`;
-    });
-    
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `relatorio_faturacao_${new Date().toISOString().slice(0,10)}.csv`;
-    link.click();
-};
-
-window.exportarRelatorioCliente = async () => {
+// ==================== IA ASSISTENTE ====================
+async function showIAAssistente() {
     const data = await loadMerchantData();
-    if (!data?.invoices || data.invoices.length === 0) return alert('Sem dados para exportar');
+    const totalVendas = data?.invoices?.filter(i => i.pago).reduce((s,i) => s + i.valor, 0) || 0;
+    document.getElementById('content').innerHTML = `
+        <h2><i class="fas fa-robot"></i> Assistente IA (Gemini)</h2>
+        <div class="dashboard-grid" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));">
+            <div class="card">
+                <h3>💡 Sugestão de Preço</h3>
+                <div class="form-group"><input type="text" id="iaProdutoNome" placeholder="Ex: Cadeira de Escritório"></div>
+                <button class="btn-primary" id="btnSugerirPrecoIA">Sugerir Preço</button>
+                <div id="iaResposta" style="margin-top: 15px; padding: 12px; background: var(--bg); border-radius: 12px;"></div>
+            </div>
+            <div class="card">
+                <h3>📊 Análise de Vendas</h3>
+                <p>Vendas totais: <strong>${totalVendas.toLocaleString()} Kz</strong><br>Faturas: ${data?.invoices?.length || 0}</p>
+                <button class="btn-primary" id="btnAnalisarVendasIA">Analisar Vendas</button>
+                <div id="iaAnaliseResposta" style="margin-top: 15px; padding: 12px; background: var(--bg); border-radius: 12px;"></div>
+            </div>
+        </div>
+    `;
     
-    let csv = "Data,Cliente,Valor (Kz),Status\n";
-    data.invoices.forEach(inv => {
-        csv += `"${inv.data}","${inv.cliente}",${inv.valor},${inv.pago ? 'Pago' : 'Pendente'}\n`;
+    document.getElementById('btnSugerirPrecoIA')?.addEventListener('click', async () => {
+        const produto = document.getElementById('iaProdutoNome').value;
+        if (!produto) { document.getElementById('iaResposta').innerHTML = '<span style="color:var(--warning);">⚠️ Digite o nome do produto</span>'; return; }
+        document.getElementById('iaResposta').innerHTML = '<i class="fas fa-spinner fa-spin"></i> A IA está a pensar...';
+        const resposta = await sugerirPrecoComIA(produto);
+        document.getElementById('iaResposta').innerHTML = resposta;
     });
     
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `minhas_vendas_${new Date().toISOString().slice(0,10)}.csv`;
-    link.click();
-};
+    document.getElementById('btnAnalisarVendasIA')?.addEventListener('click', async () => {
+        const data = await loadMerchantData();
+        const totalVendas = data?.invoices?.filter(i => i.pago).reduce((s,i) => s + i.valor, 0) || 0;
+        document.getElementById('iaAnaliseResposta').innerHTML = '<i class="fas fa-spinner fa-spin"></i> A IA está a analisar...';
+        const resposta = await analisarVendasComIA({ totalVendas, numFaturas: data?.invoices?.length || 0 });
+        document.getElementById('iaAnaliseResposta').innerHTML = resposta;
+    });
+}
 
+// ==================== PLANOS ====================
+async function mostrarPlanos() {
+    document.getElementById('content').innerHTML = `
+        <h2><i class="fas fa-crown"></i> Escolha o seu Plano</h2>
+        <div class="dashboard-grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
+            <div class="card">
+                <h3>Básico</h3>
+                <div class="value">5.000 Kz <small>/mês</small></div>
+                <ul><li><i class="fas fa-check"></i> Faturas ilimitadas</li><li><i class="fas fa-check"></i> Gestão de clientes</li><li><i class="fas fa-times"></i> IA Assistente</li><li><i class="fas fa-check"></i> Offline: 48h</li></ul>
+                <button class="btn-primary" onclick="assinarPlano('basico')">Assinar</button>
+            </div>
+            <div class="card" style="border:2px solid var(--gold);">
+                <h3>Premium <span style="font-size:0.7rem;">⭐ Recomendado</span></h3>
+                <div class="value">12.000 Kz <small>/mês</small></div>
+                <ul><li><i class="fas fa-check"></i> Tudo do Básico</li><li><i class="fas fa-robot"></i> IA Assistente</li><li><i class="fas fa-check"></i> Offline: 72h</li></ul>
+                <button class="btn-primary" onclick="assinarPlano('premium')">Assinar</button>
+            </div>
+            <div class="card">
+                <h3>Max</h3>
+                <div class="value">20.000 Kz <small>/mês</small></div>
+                <ul><li><i class="fas fa-check"></i> Tudo do Premium</li><li><i class="fas fa-chart-line"></i> Análise avançada</li><li><i class="fas fa-check"></i> Offline: 7 dias</li></ul>
+                <button class="btn-primary" onclick="assinarPlano('max')">Assinar</button>
+            </div>
+        </div>
+    `;
+}
+
+async function assinarPlano(plano) {
+    const hoje = new Date();
+    const dataFim = new Date();
+    dataFim.setMonth(dataFim.getMonth() + 1);
+    await supabaseClient.from('assinaturas').update({ ativo: false }).eq('merchant_id', currentMerchantId).eq('ativo', true);
+    await supabaseClient.from('assinaturas').insert([{ merchant_id: currentMerchantId, plano, data_inicio: hoje.toISOString().split('T')[0], data_fim: dataFim.toISOString().split('T')[0], ativo: true }]);
+    currentPlano = plano;
+    showMessage(`✅ Plano ${PLANOS[plano].nome} assinado!`, 'success');
+    showDashboard();
+}
+
+// ==================== ADMIN PANEL ====================
 async function showAdminPanel() {
     if (!currentUser?.isAdmin) return;
     const { data: pendingData } = await supabaseClient.from('pending').select('*');
-    const { data: merchantsData } = await supabaseClient.from('merchants').select('*');
-    
     document.getElementById('content').innerHTML = `
         <h2><i class="fas fa-user-check"></i> Gestão de Comerciantes</h2>
         <div id="adminMsg"></div>
-        <h3><i class="fas fa-clock"></i> Solicitações Pendentes (${pendingData?.length || 0})</h3>
-        <div class="table-wrapper">
-            <table>
-                <thead> <th>Nome</th><th>Email/Telefone</th><th>Empresa</th><th>Ações</th> </thead>
-                <tbody id="pendingList"></tbody>
-            </table>
-        </div>
-        <h3><i class="fas fa-check-circle"></i> Comerciantes Aprovados (${merchantsData?.length || 0})</h3>
-        <div class="table-wrapper">
-            <table>
-                <thead> <th>Nome</th><th>Email/Telefone</th><th>Empresa</th><th>Senha</th><th>Ações</th> </thead>
-                <tbody id="approvedList"></tbody>
-            </table>
-        </div>
+        <h3>Solicitações Pendentes (${pendingData?.length || 0})</h3>
+        <div class="table-wrapper"><table><thead><tr><th>Nome</th><th>Email/Telefone</th><th>Empresa</th><th>Ações</th></tr></thead>
+        <tbody>${pendingData?.map(p => `<tr><td>${p.nome}</td><td>${p.email} / ${p.telefone || '-'}</td><td>${p.negocio || '-'}</td>
+        <td><button class="btn-primary" onclick="approveUser('${p.email}')">Aprovar</button> <button class="btn-danger" onclick="rejectUser('${p.email}')">Rejeitar</button></td></tr>`).join('') || '<tr><td colspan="4">Nenhuma solicitação</td></tr>'}</tbody></table></div>
+        <h3>Comerciantes Aprovados</h3>
+        <div id="approvedList"></div>
     `;
-    
-    const pendingBody = document.getElementById('pendingList');
-    if (pendingData?.length) {
-        pendingBody.innerHTML = pendingData.map(p => `
-            <tr>
-                <td>${p.nome}</td>
-                <td>${p.email} / ${p.telefone || '-'}</td>
-                <td>${p.negocio || '-'}</td>
-                <td>
-                    <button class="btn-primary" onclick="approveUser('${p.email}')"><i class="fas fa-check"></i> Aprovar</button>
-                    <button class="btn-danger" onclick="rejectUser('${p.email}')"><i class="fas fa-times"></i> Rejeitar</button>
-                 </tr>
-        `).join('');
-    } else {
-        pendingBody.innerHTML = '§<td colspan="4">Nenhuma solicitação pendente§</tr>';
-    }
-    
+    const { data: merchants } = await supabaseClient.from('merchants').select('*');
     const approvedBody = document.getElementById('approvedList');
-    if (merchantsData?.length) {
-        approvedBody.innerHTML = merchantsData.map(m => `
-             <tr>
-                <td>${m.nome}</td>
-                <td>${m.email} / ${m.telefone || '-'}</td>
-                <td>${m.negocio || '-'}</td>
-                <td>🔒 ${m.senha}</td>
-                <td>
-                    <button class="btn-warning" onclick="blockMerchantByEmail('${m.email}', 'Violação dos Termos de Uso')"><i class="fas fa-ban"></i> Bloquear</button>
-                    <button class="btn-danger" onclick="deleteMerchant('${m.email}')"><i class="fas fa-trash"></i> Excluir</button>
-                </td>
-             </tr>
-        `).join('');
-    } else {
-        approvedBody.innerHTML = '<tr><td colspan="5">Nenhum comerciante aprovado</td></tr>';
-    }
+    if (merchants?.length) {
+        approvedBody.innerHTML = `<div class="table-wrapper"><table><thead><tr><th>Nome</th><th>Email/Telefone</th><th>Empresa</th><th>Senha</th><th>Ações</th></tr></thead>
+        <tbody>${merchants.map(m => `<tr><td>${m.nome}</td><td>${m.email} / ${m.telefone || '-'}</td><td>${m.negocio || '-'}</td><td>🔒 ${m.senha}</td>
+        <td><button class="btn-warning" onclick="blockMerchant('${m.email}')">Bloquear</button> <button class="btn-danger" onclick="deleteMerchant('${m.email}')">Excluir</button></td></tr>`).join('')}</tbody></table></div>`;
+    } else { approvedBody.innerHTML = '<p>Nenhum comerciante aprovado</p>'; }
 }
-
-async function showBloqueadosPanel() {
-    if (!currentUser?.isAdmin) return;
-    const blocked = await getBlockedMerchants();
-    
-    document.getElementById('content').innerHTML = `
-        <h2><i class="fas fa-ban"></i> Comerciantes Bloqueados</h2>
-        <div id="adminMsg"></div>
-        <div class="table-wrapper">
-            <table>
-                <thead> <th>Nome</th><th>Email/Telefone</th><th>Empresa</th><th>Motivo</th><th>Data Bloqueio</th><th>Ações</th> </thead>
-                <tbody id="blockedList"></tbody>
-            </table>
-        </div>
-    `;
-    
-    const blockedBody = document.getElementById('blockedList');
-    if (blocked.length) {
-        blockedBody.innerHTML = blocked.map(b => `
-             <tr>
-                <td>${b.merchants?.nome || 'N/A'}</td>
-                <td>${b.merchants?.email || '-'} / ${b.merchants?.telefone || '-'}</td>
-                <td>${b.merchants?.negocio || '-'}</td>
-                <td>${b.motivo}</td>
-                <td>${new Date(b.data_bloqueio).toLocaleDateString()}</td>
-                <td><button class="btn-primary" onclick="unblockMerchantById(${b.id})"><i class="fas fa-unlock"></i> Desbloquear</button></td>
-             </tr>
-        `).join('');
-    } else {
-        blockedBody.innerHTML = '<tr><td colspan="6">Nenhum comerciante bloqueado</td></tr>';
-    }
-}
-
-window.blockMerchantByEmail = async (email, motivo) => {
-    if (!motivo) motivo = prompt('Motivo do bloqueio:', 'Violação dos Termos de Uso');
-    if (!motivo) return;
-    
-    const { data: merchant } = await supabaseClient.from('merchants').select('id').eq('email', email).single();
-    if (merchant) {
-        const success = await supabaseClient.from('blocked_merchants').insert([{ merchant_id: merchant.id, motivo, bloqueado_por: currentUser.email, ativo: true }]);
-        if (!success.error) {
-            showMessage(`✅ Comerciante ${email} bloqueado com sucesso!`, 'success', 'adminMsg');
-            showAdminPanel();
-        } else {
-            showMessage('Erro ao bloquear comerciante', 'error', 'adminMsg');
-        }
-    }
-};
-
-window.unblockMerchantById = async (id) => {
-    const { error } = await supabaseClient
-        .from('blocked_merchants')
-        .update({ ativo: false, data_desbloqueio: new Date().toISOString() })
-        .eq('id', id);
-    if (!error) {
-        showMessage('✅ Comerciante desbloqueado com sucesso!', 'success', 'adminMsg');
-        showBloqueadosPanel();
-    } else {
-        showMessage('Erro ao desbloquear comerciante', 'error', 'adminMsg');
-    }
-};
 
 window.approveUser = async (email) => {
     const { data: pendingUser } = await supabaseClient.from('pending').select('*').eq('email', email).single();
     if (pendingUser) {
-        await supabaseClient.from('merchants').insert([{ ...pendingUser, aprovado: true, termos_aceites: false }]);
+        await supabaseClient.from('merchants').insert([{ ...pendingUser, aprovado: true }]);
         await supabaseClient.from('pending').delete().eq('email', email);
         showAdminPanel();
         showMessage('✅ Comerciante aprovado!', 'success', 'adminMsg');
@@ -1537,374 +880,141 @@ window.rejectUser = async (email) => {
 };
 
 window.deleteMerchant = async (email) => {
-    if (confirm('⚠️ Tem certeza que deseja excluir este comerciante?')) {
-        await supabaseClient.from('merchants').delete().eq('email', email);
-        showAdminPanel();
-        showMessage('🗑️ Comerciante excluído.', 'warning', 'adminMsg');
-    }
+    if (confirm('⚠️ Tem certeza?')) await supabaseClient.from('merchants').delete().eq('email', email);
+    showAdminPanel();
 };
 
+window.blockMerchant = async (email) => {
+    const motivo = prompt('Motivo do bloqueio:', 'Violação dos Termos');
+    if (!motivo) return;
+    const { data: merchant } = await supabaseClient.from('merchants').select('id').eq('email', email).single();
+    if (merchant) await supabaseClient.from('blocked_merchants').insert([{ merchant_id: merchant.id, motivo, bloqueado_por: currentUser.email }]);
+    showAdminPanel();
+};
+
+async function showBloqueadosPanel() {
+    const { data: blocked } = await supabaseClient.from('blocked_merchants').select('*, merchants(nome, email, telefone, negocio)').eq('ativo', true);
+    document.getElementById('content').innerHTML = `
+        <h2><i class="fas fa-ban"></i> Comerciantes Bloqueados</h2>
+        <div class="table-wrapper"><table><thead><tr><th>Nome</th><th>Email/Telefone</th><th>Empresa</th><th>Motivo</th><th>Data</th><th>Ações</th></tr></thead>
+        <tbody>${blocked?.map(b => `<tr><td>${b.merchants?.nome || '-'}</td><td>${b.merchants?.email || '-'} / ${b.merchants?.telefone || '-'}</td>
+        <td>${b.merchants?.negocio || '-'}</td><td>${b.motivo}</td><td>${new Date(b.data_bloqueio).toLocaleDateString()}</td>
+        <td><button class="btn-primary" onclick="unblockMerchant('${b.id}')">Desbloquear</button></td></tr>`).join('') || '<tr><td colspan="6">Nenhum comerciante bloqueado</td></tr>'}</tbody></table></div>
+    `;
+}
+
+window.unblockMerchant = async (id) => {
+    await supabaseClient.from('blocked_merchants').update({ ativo: false, data_desbloqueio: new Date().toISOString() }).eq('id', id);
+    showBloqueadosPanel();
+};
+
+// ==================== CONFIGURAÇÕES ====================
 function showConfig() {
     document.getElementById('content').innerHTML = `
         <h2><i class="fas fa-cog"></i> Configurações</h2>
         <div style="max-width: 400px;">
-            <h3><i class="fas fa-key"></i> Alterar Senha</h3>
+            <h3>Alterar Senha</h3>
             <div id="configMsg"></div>
             <div class="form-group"><label>Senha Atual</label><input type="password" id="oldPass"></div>
             <div class="form-group"><label>Nova Senha</label><input type="password" id="newPass"></div>
             <div class="form-group"><label>Confirmar Nova Senha</label><input type="password" id="confirmPass"></div>
-            <button class="btn-primary" id="changePassBtn"><i class="fas fa-save"></i> Alterar Senha</button>
+            <button class="btn-primary" id="changePassBtn">Alterar Senha</button>
         </div>
     `;
-    
     document.getElementById('changePassBtn')?.addEventListener('click', async () => {
-        const oldPass = document.getElementById('oldPass').value;
-        const newPass = document.getElementById('newPass').value;
-        const confirmPass = document.getElementById('confirmPass').value;
-        
+        const oldPass = document.getElementById('oldPass').value, newPass = document.getElementById('newPass').value, confirm = document.getElementById('confirmPass').value;
         if (!oldPass || !newPass) return showMessage('Preencha todos os campos', 'error', 'configMsg');
-        if (newPass !== confirmPass) return showMessage('As novas senhas não coincidem', 'error', 'configMsg');
-        
+        if (newPass !== confirm) return showMessage('As senhas não coincidem', 'error', 'configMsg');
         if (currentUser.isAdmin) {
-            if (oldPass === ADMIN_PASS) {
-                showMessage('✅ Senha alterada!', 'success', 'configMsg');
-                setTimeout(() => logout(), 2000);
-            } else {
-                showMessage('Senha atual incorreta', 'error', 'configMsg');
-            }
+            if (oldPass === ADMIN_PASS) { showMessage('✅ Senha alterada!', 'success', 'configMsg'); setTimeout(() => logout(), 2000); }
+            else showMessage('Senha atual incorreta', 'error', 'configMsg');
         } else {
             const { data: merchant } = await supabaseClient.from('merchants').select('senha').eq('email', currentUser.email).single();
             if (merchant && merchant.senha === oldPass) {
-                const success = await updatePassword(currentUser.email, newPass);
-                if (success) {
-                    showMessage('✅ Senha alterada! Faça login novamente.', 'success', 'configMsg');
-                    setTimeout(() => logout(), 2000);
-                } else {
-                    showMessage('Erro ao alterar senha', 'error', 'configMsg');
-                }
-            } else {
-                showMessage('Senha atual incorreta', 'error', 'configMsg');
-            }
+                await supabaseClient.from('merchants').update({ senha: newPass }).eq('email', currentUser.email);
+                showMessage('✅ Senha alterada! Faça login novamente.', 'success', 'configMsg');
+                setTimeout(() => logout(), 2000);
+            } else showMessage('Senha atual incorreta', 'error', 'configMsg');
         }
     });
 }
 
+// ==================== LOGIN ====================
 function showLogin() {
-    localStorage.setItem('ultimoLogin', Date.now().toString());
     document.getElementById('headerActions').style.display = 'none';
     document.getElementById('content').innerHTML = `
         <div style="max-width: 400px; margin: 50px auto;">
-            <h2 style="text-align:center;"><i class="fas fa-lock"></i> Entrar no V-Gest</h2>
+            <h2><i class="fas fa-lock"></i> Entrar no V-Gest</h2>
             <div id="loginMsg"></div>
-            <div class="form-group">
-                <label><i class="fas fa-envelope"></i> Email ou Telefone</label>
-                <input type="text" id="loginUser" placeholder="email@exemplo.com ou 923456789">
-            </div>
-            <div class="form-group">
-                <label><i class="fas fa-key"></i> Senha</label>
-                <input type="password" id="loginPass" style="padding-right: 40px;">
-                <span class="password-toggle" onclick="togglePassword('loginPass')"><i class="fas fa-eye"></i></span>
-            </div>
-            <button class="btn-primary" id="doLogin" style="width:100%"><i class="fas fa-sign-in-alt"></i> Entrar</button>
-            <p style="margin-top: 16px; text-align:center;"><a href="#" id="showReg"><i class="fas fa-user-plus"></i> Criar conta grátis</a></p>
-            <div style="margin-top: 16px; text-align:center; font-size: 0.8rem;">
-                <a href="#" id="forgotPass"><i class="fas fa-question-circle"></i> Esqueceu a senha?</a>
-            </div>
+            <div class="form-group"><label>Email ou Telefone</label><input type="text" id="loginUser" placeholder="email@exemplo.com ou 923456789"></div>
+            <div class="form-group"><label>Senha</label><input type="password" id="loginPass"></div>
+            <button class="btn-primary" id="doLogin" style="width:100%">Entrar</button>
+            <p style="margin-top: 16px; text-align:center;"><a href="#" id="showReg">📝 Criar conta grátis</a></p>
         </div>
         <div id="regForm" style="display:none; max-width:400px; margin:20px auto;">
-            <h2 style="text-align:center;"><i class="fas fa-user-plus"></i> Criar Conta</h2>
+            <h2>📝 Criar Conta</h2>
             <div id="regMsg"></div>
-            <div class="form-group"><label><i class="fas fa-user"></i> Nome completo</label><input type="text" id="regNome"></div>
-            <div class="form-group"><label><i class="fas fa-envelope"></i> Email</label><input type="email" id="regEmail"></div>
-            <div class="form-group"><label><i class="fas fa-phone"></i> Telefone</label><input type="tel" id="regTel" placeholder="923456789"></div>
-            <div class="form-group"><label><i class="fas fa-building"></i> Nome da empresa</label><input type="text" id="regEmpresa"></div>
-            <div class="form-group">
-                <label><i class="fas fa-key"></i> Senha</label>
-                <input type="password" id="regPass" style="padding-right: 40px;">
-                <span class="password-toggle" onclick="togglePassword('regPass')"><i class="fas fa-eye"></i></span>
-            </div>
-            <div class="form-group">
-                <label><i class="fas fa-key"></i> Confirmar Senha</label>
-                <input type="password" id="regPassConfirm" style="padding-right: 40px;">
-                <span class="password-toggle" onclick="togglePassword('regPassConfirm')"><i class="fas fa-eye"></i></span>
-            </div>
-            <button class="btn-primary" id="doReg" style="width:100%"><i class="fas fa-save"></i> Registrar</button>
-            <p style="margin-top:16px; text-align:center;"><a href="#" id="backLogin"><i class="fas fa-arrow-left"></i> Voltar ao login</a></p>
-        </div>
-        <div id="recoverForm" style="display:none; max-width:400px; margin:20px auto;">
-            <h2 style="text-align:center;"><i class="fas fa-key"></i> Recuperar Senha</h2>
-            <div id="recoverMsg"></div>
-            <div class="form-group">
-                <label>Email ou Telefone</label>
-                <input type="text" id="recoverIdentifier" placeholder="email@exemplo.com ou 923456789">
-            </div>
-            <button class="btn-primary" id="doRecover" style="width:100%"><i class="fas fa-paper-plane"></i> Enviar Código</button>
-            <div id="resetCodeArea" style="display:none; margin-top: 16px;">
-                <div class="form-group"><label>Código de Verificação</label><input type="text" id="resetCode" placeholder="Código recebido"></div>
-                <div class="form-group"><label>Nova Senha</label><input type="password" id="resetNewPass" style="padding-right: 40px;"><span class="password-toggle" onclick="togglePassword('resetNewPass')"><i class="fas fa-eye"></i></span></div>
-                <div class="form-group"><label>Confirmar Nova Senha</label><input type="password" id="resetConfirmPass" style="padding-right: 40px;"><span class="password-toggle" onclick="togglePassword('resetConfirmPass')"><i class="fas fa-eye"></i></span></div>
-                <button class="btn-primary" id="doReset" style="width:100%"><i class="fas fa-check"></i> Alterar Senha</button>
-            </div>
-            <p style="margin-top: 16px; text-align:center;"><a href="#" id="backToLogin"><i class="fas fa-arrow-left"></i> Voltar ao login</a></p>
-            <p style="margin-top: 8px; text-align:center; font-size: 0.8rem;"><a href="#" id="whatsappSupport"><i class="fab fa-whatsapp"></i> Contactar suporte pelo WhatsApp</a></p>
+            <div class="form-group"><label>Nome completo</label><input type="text" id="regNome"></div>
+            <div class="form-group"><label>Email</label><input type="email" id="regEmail"></div>
+            <div class="form-group"><label>Telefone</label><input type="tel" id="regTel"></div>
+            <div class="form-group"><label>Nome da empresa</label><input type="text" id="regEmpresa"></div>
+            <div class="form-group"><label>Senha</label><input type="password" id="regPass"></div>
+            <div class="form-group"><label>Confirmar Senha</label><input type="password" id="regPassConfirm"></div>
+            <button class="btn-primary" id="doReg" style="width:100%">Registrar</button>
+            <p><a href="#" id="backLogin">← Voltar</a></p>
         </div>
     `;
 
     document.getElementById('doLogin')?.addEventListener('click', async () => {
-        const userInput = document.getElementById('loginUser').value;
-        const pass = document.getElementById('loginPass').value;
-        
+        const userInput = document.getElementById('loginUser').value, pass = document.getElementById('loginPass').value;
         if (userInput === ADMIN_EMAIL && pass === ADMIN_PASS) {
             currentUser = { email: ADMIN_EMAIL, isAdmin: true, name: 'Administrador' };
             localStorage.setItem('currentUser', JSON.stringify(currentUser));
             document.getElementById('headerActions').style.display = 'flex';
-            termoAceite = true;
             await renderMenu();
             showDashboard();
             return;
         }
-        
-        let { data: merchant } = await supabaseClient
-            .from('merchants')
-            .select('*')
-            .eq('email', userInput)
-            .eq('senha', pass)
-            .single();
-        
+        let { data: merchant } = await supabaseClient.from('merchants').select('*').eq('email', userInput).eq('senha', pass).single();
         if (!merchant) {
-            const { data: merchantByPhone } = await supabaseClient
-                .from('merchants')
-                .select('*')
-                .eq('telefone', userInput)
-                .eq('senha', pass)
-                .single();
+            const { data: merchantByPhone } = await supabaseClient.from('merchants').select('*').eq('telefone', userInput).eq('senha', pass).single();
             merchant = merchantByPhone;
         }
-            
-        if (merchant && merchant.aprovado === true) {
+        if (merchant && merchant.aprovado) {
             currentUser = { email: merchant.email, name: merchant.nome, isAdmin: false };
             localStorage.setItem('currentUser', JSON.stringify(currentUser));
             document.getElementById('headerActions').style.display = 'flex';
             await renderMenu();
-            
-            if (merchant.termos_aceites) {
-                termoAceite = true;
-                localStorage.setItem('termosAceites', 'true');
-            } else {
-                termoAceite = false;
-                showTermos(true);
-                return;
-            }
-            
-            await verificarAssinatura();
             showDashboard();
             return;
         }
-        
-        let { data: pendingUser } = await supabaseClient
-            .from('pending')
-            .select('*')
-            .eq('email', userInput)
-            .single();
-        
-        if (!pendingUser) {
-            const { data: pendingByPhone } = await supabaseClient
-                .from('pending')
-                .select('*')
-                .eq('telefone', userInput)
-                .single();
-            pendingUser = pendingByPhone;
-        }
-            
-        if (pendingUser) {
-            document.getElementById('loginMsg').innerHTML = '<div class="alert alert-warning"><i class="fas fa-clock"></i> Aguardando aprovação do administrador.<br><i class="fab fa-whatsapp"></i> <a href="#" onclick="window.location.href=\'https://wa.me/244954289109\'">Contacte-nos no WhatsApp</a></div>';
-        } else {
-            document.getElementById('loginMsg').innerHTML = '<div class="alert alert-error"><i class="fas fa-exclamation-triangle"></i> Email/Telefone ou senha inválidos</div>';
-        }
+        const { data: pendingUser } = await supabaseClient.from('pending').select('*').eq('email', userInput).single();
+        if (pendingUser) document.getElementById('loginMsg').innerHTML = '<div class="alert alert-warning">⏳ Aguardando aprovação.</div>';
+        else document.getElementById('loginMsg').innerHTML = '<div class="alert alert-error">❌ Credenciais inválidas</div>';
     });
 
-    document.getElementById('showReg')?.addEventListener('click', (e) => {
-        e.preventDefault();
-        document.getElementById('loginMsg').parentElement.style.display = 'none';
-        document.getElementById('regForm').style.display = 'block';
-        document.getElementById('recoverForm').style.display = 'none';
-    });
-    
-    document.getElementById('backLogin')?.addEventListener('click', (e) => {
-        e.preventDefault();
-        document.getElementById('loginMsg').parentElement.style.display = 'block';
-        document.getElementById('regForm').style.display = 'none';
-        document.getElementById('recoverForm').style.display = 'none';
-    });
-    
-    document.getElementById('forgotPass')?.addEventListener('click', (e) => {
-        e.preventDefault();
-        document.getElementById('loginMsg').parentElement.style.display = 'none';
-        document.getElementById('regForm').style.display = 'none';
-        document.getElementById('recoverForm').style.display = 'block';
-    });
-    
-    document.getElementById('backToLogin')?.addEventListener('click', (e) => {
-        e.preventDefault();
-        document.getElementById('loginMsg').parentElement.style.display = 'block';
-        document.getElementById('regForm').style.display = 'none';
-        document.getElementById('recoverForm').style.display = 'none';
-    });
-    
-    document.getElementById('whatsappSupport')?.addEventListener('click', (e) => {
-        e.preventDefault();
-        window.location.href = 'https://wa.me/244954289109?text=Olá! Preciso de ajuda para recuperar minha senha do V-Gest.';
-    });
-    
-    let recoveryCode = null;
-    let recoveryUser = null;
-    
-    document.getElementById('doRecover')?.addEventListener('click', async () => {
-        const identifier = document.getElementById('recoverIdentifier').value;
-        if (!identifier) {
-            showMessage('Digite seu email ou telefone', 'error', 'recoverMsg');
-            return;
-        }
-        
-        const user = await findUserByEmailOrPhone(identifier);
-        if (!user) {
-            showMessage('Usuário não encontrado. Contacte o suporte.', 'error', 'recoverMsg');
-            return;
-        }
-        
-        recoveryCode = Math.floor(100000 + Math.random() * 900000).toString();
-        recoveryUser = user;
-        showMessage(`✅ Código enviado! (Simulação: ${recoveryCode})`, 'success', 'recoverMsg');
-        document.getElementById('resetCodeArea').style.display = 'block';
-    });
-    
-    document.getElementById('doReset')?.addEventListener('click', async () => {
-        const code = document.getElementById('resetCode').value;
-        const newPass = document.getElementById('resetNewPass').value;
-        const confirmPass = document.getElementById('resetConfirmPass').value;
-        
-        if (code !== recoveryCode) {
-            showMessage('Código inválido', 'error', 'recoverMsg');
-            return;
-        }
-        if (!newPass || newPass !== confirmPass) {
-            showMessage('As senhas não coincidem', 'error', 'recoverMsg');
-            return;
-        }
-        
-        const success = await updatePassword(recoveryUser.email, newPass);
-        if (success) {
-            showMessage('✅ Senha alterada com sucesso! Faça login.', 'success', 'recoverMsg');
-            setTimeout(() => {
-                document.getElementById('loginMsg').parentElement.style.display = 'block';
-                document.getElementById('recoverForm').style.display = 'none';
-            }, 2000);
-        } else {
-            showMessage('Erro ao alterar senha', 'error', 'recoverMsg');
-        }
-    });
-    
+    document.getElementById('showReg')?.addEventListener('click', (e) => { e.preventDefault(); document.getElementById('loginMsg').parentElement.style.display = 'none'; document.getElementById('regForm').style.display = 'block'; });
+    document.getElementById('backLogin')?.addEventListener('click', (e) => { e.preventDefault(); document.getElementById('loginMsg').parentElement.style.display = 'block'; document.getElementById('regForm').style.display = 'none'; });
     document.getElementById('doReg')?.addEventListener('click', async () => {
-        const nome = document.getElementById('regNome').value;
-        const email = document.getElementById('regEmail').value;
-        const tel = document.getElementById('regTel').value;
-        const empresa = document.getElementById('regEmpresa').value;
-        const senha = document.getElementById('regPass').value;
-        const confirmSenha = document.getElementById('regPassConfirm').value;
-
-        if (!nome || !email || !senha) {
-            showMessage('Preencha nome, email e senha', 'error', 'regMsg');
-            return;
-        }
-        if (senha !== confirmSenha) {
-            showMessage('As senhas não coincidem', 'error', 'regMsg');
-            return;
-        }
-
-        const { data: existing } = await supabaseClient
-            .from('merchants')
-            .select('email')
-            .eq('email', email)
-            .single();
-            
-        if (existing) {
-            showMessage('Email já registado', 'error', 'regMsg');
-            return;
-        }
-
-        const isCliente = await isClienteVideira(nome, email, tel, empresa);
-        
-        if (isCliente) {
-            const { error } = await supabaseClient
-                .from('merchants')
-                .insert([{ nome, email, telefone: tel, negocio: empresa, senha, aprovado: true, termos_aceites: false }]);
-            
-            if (error) {
-                showMessage('Erro ao registrar. Tente novamente.', 'error', 'regMsg');
-                return;
-            }
-            
-            showMessage('✅ Cliente identificado! Conta aprovada automaticamente. Faça login.', 'success', 'regMsg');
-            setTimeout(() => {
-                document.getElementById('loginMsg').parentElement.style.display = 'block';
-                document.getElementById('regForm').style.display = 'none';
-                document.getElementById('loginMsg').innerHTML = '<div class="alert alert-success">✅ Conta aprovada! Faça login e aceite os termos.</div>';
-            }, 3000);
-        } else {
-            const { error } = await supabaseClient
-                .from('pending')
-                .insert([{ nome, email, telefone: tel, negocio: empresa, senha }]);
-
-            if (error) {
-                showMessage('Erro ao registrar. Tente novamente.', 'error', 'regMsg');
-                return;
-            }
-            
-            const mensagem = `🆕 *Nova Solicitação de Cadastro no V-Gest!*%0A%0A👤 *Nome:* ${nome}%0A📧 *Email:* ${email}%0A📱 *Telefone:* ${tel}%0A🏢 *Empresa:* ${empresa}%0A%0A⏳ Aguardando aprovação no sistema.`;
-            window.open(`https://wa.me/244954289109?text=${mensagem}`, '_blank');
-            
-            showMessage('✅ Cadastro realizado! Aguarde aprovação do administrador.', 'success', 'regMsg');
-            setTimeout(() => {
-                document.getElementById('loginMsg').parentElement.style.display = 'block';
-                document.getElementById('regForm').style.display = 'none';
-                document.getElementById('loginMsg').innerHTML = '<div class="alert alert-success">✅ Conta criada! Aguarde aprovação do administrador.</div>';
-            }, 3000);
-        }
+        const nome = document.getElementById('regNome').value, email = document.getElementById('regEmail').value, tel = document.getElementById('regTel').value, empresa = document.getElementById('regEmpresa').value, senha = document.getElementById('regPass').value, confirm = document.getElementById('regPassConfirm').value;
+        if (!nome || !email || !senha) return showMessage('Preencha todos os campos', 'error', 'regMsg');
+        if (senha !== confirm) return showMessage('As senhas não coincidem', 'error', 'regMsg');
+        const { error } = await supabaseClient.from('pending').insert([{ nome, email, telefone: tel, negocio: empresa, senha }]);
+        if (error) return showMessage('Erro ao registrar', 'error', 'regMsg');
+        showMessage('✅ Cadastro realizado! Aguarde aprovação.', 'success', 'regMsg');
+        setTimeout(() => { document.getElementById('loginMsg').parentElement.style.display = 'block'; document.getElementById('regForm').style.display = 'none'; }, 2000);
     });
 }
 
-window.togglePassword = (fieldId) => {
-    const field = document.getElementById(fieldId);
-    field.type = field.type === 'password' ? 'text' : 'password';
-};
-
-document.getElementById('menuBtn').addEventListener('click', () => {
-    if (sidebar.classList.contains('open')) closeMenu();
-    else openMenu();
-});
+document.getElementById('menuBtn').addEventListener('click', () => { if (sidebar.classList.contains('open')) closeMenu(); else openMenu(); });
 document.getElementById('overlay').addEventListener('click', closeMenu);
-document.getElementById('darkBtn').addEventListener('click', () => {
-    document.body.classList.toggle('dark');
-    localStorage.setItem('dark', document.body.classList.contains('dark') ? 'dark' : '');
-});
-document.getElementById('helpBtn').addEventListener('click', () => alert("📘 V-Gest v15.0 (Gemini AI)\n\n✅ IA integrada: Sugestão de preços, análise de vendas\n✅ PLANOS: Básico (5k), Premium (12k), Max (20k)\n✅ OFFLINE: até 48h (Básico), 72h (Premium), 7 dias (Max)\n✅ TERMOS DE USO: Aceitação obrigatória\n✅ BLOQUEIO: Admin pode bloquear comerciantes\n\nADMIN: admin@v-gest.ao / admin123\n\nSuporte: WhatsApp 954 289 109"));
+document.getElementById('darkBtn').addEventListener('click', () => { document.body.classList.toggle('dark'); localStorage.setItem('dark', document.body.classList.contains('dark') ? 'dark' : ''); });
+document.getElementById('helpBtn').addEventListener('click', () => alert("📘 V-Gest v15.0 (Gemini AI)\n\nADMIN: admin@v-gest.ao / admin123\n- Aprovar comerciantes\n- Bloquear comerciantes\n- Relatórios de faturação\n\nCLIENTE:\n- Gerir faturas, clientes, produtos\n- IA: Sugestão de preços, análise de vendas\n- Planos: Básico, Premium, Max\n\nSuporte: WhatsApp 954 289 109"));
 
 if (localStorage.getItem('dark') === 'dark') document.body.classList.add('dark');
-const savedUser = localStorage.getItem('currentUser');
-if (savedUser) {
-    currentUser = JSON.parse(savedUser);
-    document.getElementById('headerActions').style.display = 'flex';
-    renderMenu().then(() => {
-        if (!currentUser.isAdmin && !localStorage.getItem('termosAceites')) {
-            showTermos();
-        } else {
-            termoAceite = true;
-            showDashboard();
-        }
-    });
-} else {
-    showLogin();
-}
+const saved = localStorage.getItem('currentUser');
+if (saved) { currentUser = JSON.parse(saved); document.getElementById('headerActions').style.display = 'flex'; renderMenu().then(() => showDashboard()); }
+else showLogin();
 </script>
 </body>
 </html>
