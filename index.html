@@ -439,7 +439,7 @@ async function showPage(page) {
     });
 }
 
-// ==================== LOGIN E CADASTRO ====================
+// ==================== LOGIN E CADASTRO (COM EMAIL E TELEFONE) ====================
 function showLogin() {
     document.getElementById('headerActions').style.display = 'none';
     document.getElementById('content').innerHTML = `
@@ -487,6 +487,7 @@ function showLogin() {
         const userInput = document.getElementById('loginUser').value;
         const pass = document.getElementById('loginPass').value;
         
+        // Login admin
         if (userInput === ADMIN_EMAIL && pass === ADMIN_PASS) {
             currentUser = { email: ADMIN_EMAIL, isAdmin: true, name: 'Administrador' };
             localStorage.setItem('currentUser', JSON.stringify(currentUser));
@@ -496,12 +497,24 @@ function showLogin() {
             return;
         }
         
-        const { data: merchant } = await supabaseClient
+        // Tentar login por email
+        let { data: merchant } = await supabaseClient
             .from('merchants')
             .select('*')
             .eq('email', userInput)
             .eq('senha', pass)
             .single();
+        
+        // Se não encontrar por email, tentar por telefone
+        if (!merchant) {
+            const { data: merchantByPhone } = await supabaseClient
+                .from('merchants')
+                .select('*')
+                .eq('telefone', userInput)
+                .eq('senha', pass)
+                .single();
+            merchant = merchantByPhone;
+        }
             
         if (merchant && merchant.aprovado === true) {
             currentUser = { email: merchant.email, name: merchant.nome, isAdmin: false, telefone: merchant.telefone };
@@ -512,11 +525,21 @@ function showLogin() {
             return;
         }
         
-        const { data: pendingUser } = await supabaseClient
+        // Verificar se está pendente (por email ou telefone)
+        let { data: pendingUser } = await supabaseClient
             .from('pending')
             .select('*')
             .eq('email', userInput)
             .single();
+        
+        if (!pendingUser) {
+            const { data: pendingByPhone } = await supabaseClient
+                .from('pending')
+                .select('*')
+                .eq('telefone', userInput)
+                .single();
+            pendingUser = pendingByPhone;
+        }
             
         if (pendingUser) {
             document.getElementById('loginMsg').innerHTML = '<div class="alert alert-warning">⏳ Aguardando aprovação do administrador.<br>📱 <a href="#" onclick="window.location.href=\'https://wa.me/244954289109\'">Contacte-nos no WhatsApp</a> →</div>';
@@ -821,7 +844,7 @@ async function showAdminPanel() {
     
     const pendingDiv = document.getElementById('pendingList');
     if (pendingData?.length) {
-        let html = '<div class="table-wrapper">能able> <th>Nome</th><th>Email</th><th>Negócio</th><th>Ação</th>  ·';
+        let html = '<div class="table-wrapper">能able> <th>Nome</th><th>Email/Telefone</th><th>Negócio</th><th>Ação</th>  ·';
         pendingData.forEach((p) => {
             html += `§
                 <td contenteditable="true">${p.nome}§
@@ -838,7 +861,7 @@ async function showAdminPanel() {
     
     const approvedDiv = document.getElementById('approvedList');
     if (merchantsData?.length) {
-        let html = '<div class="table-wrapper">能able> <th>Nome</th><th>Email</th><th>Negócio</th><th>Senha</th><th>Ação</th>  ·';
+        let html = '<div class="table-wrapper">能able> <th>Nome</th><th>Email/Telefone</th><th>Negócio</th><th>Senha</th><th>Ação</th>  ·';
         merchantsData.forEach((u) => {
             html += `§
                 <td contenteditable="true">${u.nome}§
