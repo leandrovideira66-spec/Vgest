@@ -189,15 +189,31 @@
             font-size: 1.2rem;
         }
 
-        .table-wrapper { overflow-x: auto; }
-        table { width: 100%; background: var(--card); border-radius: 16px; overflow: hidden; border-collapse: collapse; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); }
-        th { background: var(--primary); color: white; }
+        .table-wrapper { overflow-x: auto; margin-bottom: 20px; }
+        table {
+            width: 100%;
+            background: var(--card);
+            border-radius: 16px;
+            overflow: hidden;
+            border-collapse: collapse;
+            box-shadow: var(--shadow);
+        }
+        th, td {
+            padding: 14px 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+        th {
+            background: var(--primary);
+            color: white;
+            font-weight: 600;
+        }
 
         .alert { padding: 12px; border-radius: 12px; margin-bottom: 16px; }
         .alert-success { background: #d1fae5; color: #065f46; }
         .alert-error { background: #fee2e2; color: #991b1b; }
         .alert-warning { background: #fef3c7; color: #92400e; }
+        .alert-info { background: #dbeafe; color: #1e40af; }
 
         .loading {
             position: fixed;
@@ -278,7 +294,7 @@
         </div>
         <div id="content"></div>
         <footer>
-            <p>© 2026 Videira's Assessoria Empresarial - V-Gest v8.0 (Supabase)</p>
+            <p>© 2026 Videira's Assessoria Empresarial - V-Gest v11.0 (Supabase)</p>
             <p>📍 Luanda, Angola | 📱 @videira.assessoria | 📧 leandrovideira66@gmail.com</p>
         </footer>
     </main>
@@ -343,19 +359,7 @@ function logout() {
     localStorage.removeItem('currentUser');
     document.body.classList.remove('dark');
     document.getElementById('headerActions').style.display = 'none';
-    showLogin();
-}
-
-let backPressCount = 0;
-function handleBackPress() {
-    backPressCount++;
-    if (backPressCount >= 2) {
-        logout();
-        backPressCount = 0;
-    } else {
-        showMessage('⚠️ Pressione novamente para sair', 'warning', 'adminMsg');
-        setTimeout(() => { backPressCount = 0; }, 3000);
-    }
+    showLoading(() => showLogin());
 }
 
 // ==================== FUNÇÕES SUPABASE ====================
@@ -393,27 +397,80 @@ async function getMerchantsCount() {
     return count || 0;
 }
 
+async function updatePassword(email, newPassword) {
+    const { error } = await supabaseClient
+        .from('merchants')
+        .update({ senha: newPassword })
+        .eq('email', email);
+    return !error;
+}
+
+async function findUserByEmailOrPhone(identifier) {
+    let { data: user } = await supabaseClient
+        .from('merchants')
+        .select('*')
+        .eq('email', identifier)
+        .single();
+    if (!user) {
+        const { data: userByPhone } = await supabaseClient
+            .from('merchants')
+            .select('*')
+            .eq('telefone', identifier)
+            .single();
+        user = userByPhone;
+    }
+    return user;
+}
+
+// ==================== VERIFICAÇÃO DE CLIENTE VIDEIRA ====================
+async function isClienteVideira(nome, email, telefone, empresa) {
+    // Verifica se existe na tabela clientes_videira
+    let { data: cliente } = await supabaseClient
+        .from('clientes_videira')
+        .select('*')
+        .eq('nome', nome)
+        .eq('email', email)
+        .single();
+    
+    if (!cliente) {
+        // Tenta por telefone
+        const { data: clienteByPhone } = await supabaseClient
+            .from('clientes_videira')
+            .select('*')
+            .eq('telefone', telefone)
+            .single();
+        cliente = clienteByPhone;
+    }
+    
+    if (!cliente && empresa) {
+        // Tenta por nome da empresa
+        const { data: clienteByEmpresa } = await supabaseClient
+            .from('clientes_videira')
+            .select('*')
+            .eq('nome_empresa', empresa)
+            .single();
+        cliente = clienteByEmpresa;
+    }
+    
+    return cliente !== null;
+}
+
 // ==================== MENU E NAVEGAÇÃO ====================
 async function renderMenu() {
     if (!currentUser) return;
     let html = '';
     if (currentUser.isAdmin) {
         const pendingCount = await getPendingCount();
-        html += `<button data-page="admin">
-                    👑 Gestão de Comerciantes
-                    ${pendingCount > 0 ? `<span class="badge">${pendingCount}</span>` : ''}
-                 </button>`;
+        html += `<button data-page="admin">👑 Aprovar Comerciantes ${pendingCount > 0 ? `<span class="badge">${pendingCount}</span>` : ''}</button>`;
         html += `<button data-page="dashboard">📊 Dashboard Admin</button>`;
-        html += `<button data-page="faturas">📊 Faturas</button>`;
-        html += `<button data-page="clientes">👥 Clientes</button>`;
-        html += `<button data-page="produtos">📦 Produtos</button>`;
-        html += `<button data-page="contabilidade">💰 Contabilidade</button>`;
+        html += `<button data-page="config">🛠️ Configurações</button>`;
     } else {
         html += `<button data-page="dashboard">📊 Dashboard</button>`;
         html += `<button data-page="faturas">📊 Faturas</button>`;
         html += `<button data-page="clientes">👥 Meus Clientes</button>`;
         html += `<button data-page="produtos">📦 Meus Produtos</button>`;
         html += `<button data-page="contabilidade">💰 Contabilidade</button>`;
+        html += `<button data-page="config">🛠️ Configurações</button>`;
     }
     html += `<button data-page="logout">🚪 Sair</button>`;
     document.getElementById('nav').innerHTML = html;
@@ -431,7 +488,8 @@ async function showPage(page) {
     else if (page === 'produtos') showProdutos();
     else if (page === 'contabilidade') showContabilidade();
     else if (page === 'admin') showAdminPanel();
-    else if (page === 'logout') handleBackPress();
+    else if (page === 'config') showConfig();
+    else if (page === 'logout') logout();
 
     document.querySelectorAll('.sidebar-nav button').forEach(btn => {
         if (btn.dataset.page === page) btn.classList.add('active');
@@ -439,7 +497,77 @@ async function showPage(page) {
     });
 }
 
-// ==================== LOGIN E CADASTRO (COM EMAIL E TELEFONE) ====================
+// ==================== CONFIGURAÇÕES ====================
+function showConfig() {
+    document.getElementById('content').innerHTML = `
+        <h2>🛠️ Configurações</h2>
+        <div style="max-width: 400px; margin: 20px 0;">
+            <h3>Alterar Senha</h3>
+            <div id="configMsg"></div>
+            <div class="form-group">
+                <label>Senha Atual</label>
+                <input type="password" id="oldPass" style="padding-right: 40px;">
+                <span class="password-toggle" onclick="togglePassword('oldPass')">👁️</span>
+            </div>
+            <div class="form-group">
+                <label>Nova Senha</label>
+                <input type="password" id="newPass" style="padding-right: 40px;">
+                <span class="password-toggle" onclick="togglePassword('newPass')">👁️</span>
+            </div>
+            <div class="form-group">
+                <label>Confirmar Nova Senha</label>
+                <input type="password" id="confirmPass" style="padding-right: 40px;">
+                <span class="password-toggle" onclick="togglePassword('confirmPass')">👁️</span>
+            </div>
+            <button class="btn-primary" id="changePassBtn">Alterar Senha</button>
+        </div>
+    `;
+
+    document.getElementById('changePassBtn')?.addEventListener('click', async () => {
+        const oldPass = document.getElementById('oldPass').value;
+        const newPass = document.getElementById('newPass').value;
+        const confirmPass = document.getElementById('confirmPass').value;
+
+        if (!oldPass || !newPass) {
+            showMessage('Preencha todos os campos', 'error', 'configMsg');
+            return;
+        }
+        if (newPass !== confirmPass) {
+            showMessage('As novas senhas não coincidem', 'error', 'configMsg');
+            return;
+        }
+
+        if (currentUser.isAdmin) {
+            if (oldPass === ADMIN_PASS) {
+                showMessage('✅ Senha alterada com sucesso!', 'success', 'configMsg');
+                setTimeout(() => logout(), 2000);
+                return;
+            } else {
+                showMessage('Senha atual incorreta', 'error', 'configMsg');
+                return;
+            }
+        } else {
+            const { data: merchant } = await supabaseClient
+                .from('merchants')
+                .select('senha')
+                .eq('email', currentUser.email)
+                .single();
+            if (merchant && merchant.senha === oldPass) {
+                const success = await updatePassword(currentUser.email, newPass);
+                if (success) {
+                    showMessage('✅ Senha alterada com sucesso! Faça login novamente.', 'success', 'configMsg');
+                    setTimeout(() => logout(), 2000);
+                } else {
+                    showMessage('Erro ao alterar senha', 'error', 'configMsg');
+                }
+            } else {
+                showMessage('Senha atual incorreta', 'error', 'configMsg');
+            }
+        }
+    });
+}
+
+// ==================== LOGIN E CADASTRO (COM APROVAÇÃO AUTOMÁTICA) ====================
 function showLogin() {
     document.getElementById('headerActions').style.display = 'none';
     document.getElementById('content').innerHTML = `
@@ -458,7 +586,7 @@ function showLogin() {
             <button class="btn-primary" id="doLogin">Entrar</button>
             <p style="margin-top: 16px;"><a href="#" id="showReg">📝 Criar conta grátis</a></p>
             <div style="margin-top: 16px; font-size: 0.8rem;">
-                <a href="#" id="forgotPass">Esqueceu a senha?</a>
+                <a href="#" id="forgotPass">🔐 Esqueceu a senha?</a>
             </div>
         </div>
         <div id="regForm" style="display:none; max-width:400px; margin:20px auto;">
@@ -467,7 +595,7 @@ function showLogin() {
             <div class="form-group"><label>Nome completo</label><input type="text" id="regNome"></div>
             <div class="form-group"><label>Email</label><input type="email" id="regEmail"></div>
             <div class="form-group"><label>Telefone (WhatsApp)</label><input type="tel" id="regTel" placeholder="923456789"></div>
-            <div class="form-group"><label>Nome do negócio</label><input type="text" id="regNeg"></div>
+            <div class="form-group"><label>Nome da empresa</label><input type="text" id="regEmpresa"></div>
             <div class="form-group">
                 <label>Senha</label>
                 <input type="password" id="regPass" style="padding-right: 40px;">
@@ -481,13 +609,30 @@ function showLogin() {
             <button class="btn-primary" id="doReg">Registrar</button>
             <p><a href="#" id="backLogin">← Voltar ao login</a></p>
         </div>
+        <div id="recoverForm" style="display:none; max-width:400px; margin:20px auto;">
+            <h2>🔐 Recuperar Senha</h2>
+            <div id="recoverMsg"></div>
+            <div class="form-group">
+                <label>Email ou Telefone</label>
+                <input type="text" id="recoverIdentifier" placeholder="email@exemplo.com ou 923456789">
+            </div>
+            <button class="btn-primary" id="doRecover">Enviar Código</button>
+            <div id="resetCodeArea" style="display:none; margin-top: 16px;">
+                <div class="form-group"><label>Código de Verificação</label><input type="text" id="resetCode" placeholder="Código recebido"></div>
+                <div class="form-group"><label>Nova Senha</label><input type="password" id="resetNewPass" style="padding-right: 40px;"><span class="password-toggle" onclick="togglePassword('resetNewPass')">👁️</span></div>
+                <div class="form-group"><label>Confirmar Nova Senha</label><input type="password" id="resetConfirmPass" style="padding-right: 40px;"><span class="password-toggle" onclick="togglePassword('resetConfirmPass')">👁️</span></div>
+                <button class="btn-primary" id="doReset">Alterar Senha</button>
+            </div>
+            <p style="margin-top: 16px;"><a href="#" id="backToLogin">← Voltar ao login</a></p>
+            <p style="margin-top: 8px; font-size: 0.8rem;"><a href="#" id="whatsappSupport">📱 Contactar suporte pelo WhatsApp</a></p>
+        </div>
     `;
 
+    // Login
     document.getElementById('doLogin')?.addEventListener('click', async () => {
         const userInput = document.getElementById('loginUser').value;
         const pass = document.getElementById('loginPass').value;
         
-        // Login admin
         if (userInput === ADMIN_EMAIL && pass === ADMIN_PASS) {
             currentUser = { email: ADMIN_EMAIL, isAdmin: true, name: 'Administrador' };
             localStorage.setItem('currentUser', JSON.stringify(currentUser));
@@ -497,7 +642,6 @@ function showLogin() {
             return;
         }
         
-        // Tentar login por email
         let { data: merchant } = await supabaseClient
             .from('merchants')
             .select('*')
@@ -505,7 +649,6 @@ function showLogin() {
             .eq('senha', pass)
             .single();
         
-        // Se não encontrar por email, tentar por telefone
         if (!merchant) {
             const { data: merchantByPhone } = await supabaseClient
                 .from('merchants')
@@ -525,7 +668,6 @@ function showLogin() {
             return;
         }
         
-        // Verificar se está pendente (por email ou telefone)
         let { data: pendingUser } = await supabaseClient
             .from('pending')
             .select('*')
@@ -548,10 +690,12 @@ function showLogin() {
         }
     });
 
+    // Cadastro com aprovação automática
     document.getElementById('showReg')?.addEventListener('click', (e) => {
         e.preventDefault();
         document.getElementById('loginMsg').parentElement.style.display = 'none';
         document.getElementById('regForm').style.display = 'block';
+        document.getElementById('recoverForm').style.display = 'none';
         document.getElementById('regMsg').innerHTML = '';
     });
     
@@ -559,19 +703,86 @@ function showLogin() {
         e.preventDefault();
         document.getElementById('loginMsg').parentElement.style.display = 'block';
         document.getElementById('regForm').style.display = 'none';
+        document.getElementById('recoverForm').style.display = 'none';
         document.getElementById('loginMsg').innerHTML = '';
     });
     
+    // Recuperação de senha
     document.getElementById('forgotPass')?.addEventListener('click', (e) => {
         e.preventDefault();
-        document.getElementById('loginMsg').innerHTML = '<div class="alert alert-info">🔐 Esqueceu a senha? Contacte o administrador: <a href="https://wa.me/244954289109">WhatsApp 954 289 109</a></div>';
+        document.getElementById('loginMsg').parentElement.style.display = 'none';
+        document.getElementById('regForm').style.display = 'none';
+        document.getElementById('recoverForm').style.display = 'block';
     });
     
+    document.getElementById('backToLogin')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        document.getElementById('loginMsg').parentElement.style.display = 'block';
+        document.getElementById('regForm').style.display = 'none';
+        document.getElementById('recoverForm').style.display = 'none';
+        document.getElementById('loginMsg').innerHTML = '';
+    });
+    
+    document.getElementById('whatsappSupport')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        window.location.href = 'https://wa.me/244954289109?text=Olá! Preciso de ajuda para recuperar minha senha do V-Gest.';
+    });
+    
+    let recoveryCode = null;
+    let recoveryUser = null;
+    
+    document.getElementById('doRecover')?.addEventListener('click', async () => {
+        const identifier = document.getElementById('recoverIdentifier').value;
+        if (!identifier) {
+            showMessage('Digite seu email ou telefone', 'error', 'recoverMsg');
+            return;
+        }
+        
+        const user = await findUserByEmailOrPhone(identifier);
+        if (!user) {
+            showMessage('Usuário não encontrado. Contacte o suporte.', 'error', 'recoverMsg');
+            return;
+        }
+        
+        recoveryCode = Math.floor(100000 + Math.random() * 900000).toString();
+        recoveryUser = user;
+        showMessage(`✅ Código enviado! (Simulação: ${recoveryCode})`, 'success', 'recoverMsg');
+        document.getElementById('resetCodeArea').style.display = 'block';
+    });
+    
+    document.getElementById('doReset')?.addEventListener('click', async () => {
+        const code = document.getElementById('resetCode').value;
+        const newPass = document.getElementById('resetNewPass').value;
+        const confirmPass = document.getElementById('resetConfirmPass').value;
+        
+        if (code !== recoveryCode) {
+            showMessage('Código inválido', 'error', 'recoverMsg');
+            return;
+        }
+        if (!newPass || newPass !== confirmPass) {
+            showMessage('As senhas não coincidem', 'error', 'recoverMsg');
+            return;
+        }
+        
+        const success = await updatePassword(recoveryUser.email, newPass);
+        if (success) {
+            showMessage('✅ Senha alterada com sucesso! Faça login.', 'success', 'recoverMsg');
+            setTimeout(() => {
+                document.getElementById('loginMsg').parentElement.style.display = 'block';
+                document.getElementById('recoverForm').style.display = 'none';
+                document.getElementById('loginMsg').innerHTML = '<div class="alert alert-success">Senha alterada! Faça login.</div>';
+            }, 2000);
+        } else {
+            showMessage('Erro ao alterar senha', 'error', 'recoverMsg');
+        }
+    });
+    
+    // Cadastro com aprovação automática
     document.getElementById('doReg')?.addEventListener('click', async () => {
         const nome = document.getElementById('regNome').value;
         const email = document.getElementById('regEmail').value;
         const tel = document.getElementById('regTel').value;
-        const neg = document.getElementById('regNeg').value;
+        const empresa = document.getElementById('regEmpresa').value;
         const senha = document.getElementById('regPass').value;
         const confirmSenha = document.getElementById('regPassConfirm').value;
 
@@ -595,28 +806,58 @@ function showLogin() {
             return;
         }
 
-        const { error } = await supabaseClient
-            .from('pending')
-            .insert([{ nome, email, telefone: tel, negocio: neg, senha }]);
+        // VERIFICA SE É CLIENTE DA VIDEIRA'S
+        const isCliente = await isClienteVideira(nome, email, tel, empresa);
+        
+        if (isCliente) {
+            // APROVAÇÃO AUTOMÁTICA
+            const { error } = await supabaseClient
+                .from('merchants')
+                .insert([{ nome, email, telefone: tel, negocio: empresa, senha, aprovado: true }]);
+            
+            if (error) {
+                document.getElementById('regMsg').innerHTML = '<div class="alert alert-error">Erro ao registrar. Tente novamente.</div>';
+                return;
+            }
+            
+            document.getElementById('regMsg').innerHTML = '<div class="alert alert-success">✅ Cliente identificado! Conta aprovada automaticamente. Faça login.</div>';
+            document.getElementById('regNome').value = '';
+            document.getElementById('regEmail').value = '';
+            document.getElementById('regTel').value = '';
+            document.getElementById('regEmpresa').value = '';
+            document.getElementById('regPass').value = '';
+            document.getElementById('regPassConfirm').value = '';
+            
+            setTimeout(() => {
+                document.getElementById('loginMsg').parentElement.style.display = 'block';
+                document.getElementById('regForm').style.display = 'none';
+                document.getElementById('loginMsg').innerHTML = '<div class="alert alert-success">✅ Conta aprovada! Faça login.</div>';
+            }, 3000);
+        } else {
+            // AGUARDA APROVAÇÃO MANUAL
+            const { error } = await supabaseClient
+                .from('pending')
+                .insert([{ nome, email, telefone: tel, negocio: empresa, senha }]);
 
-        if (error) {
-            document.getElementById('regMsg').innerHTML = '<div class="alert alert-error">Erro ao registrar. Tente novamente.</div>';
-            return;
+            if (error) {
+                document.getElementById('regMsg').innerHTML = '<div class="alert alert-error">Erro ao registrar. Tente novamente.</div>';
+                return;
+            }
+
+            document.getElementById('regMsg').innerHTML = '<div class="alert alert-success">✅ Cadastro realizado! Aguarde aprovação do administrador.</div>';
+            document.getElementById('regNome').value = '';
+            document.getElementById('regEmail').value = '';
+            document.getElementById('regTel').value = '';
+            document.getElementById('regEmpresa').value = '';
+            document.getElementById('regPass').value = '';
+            document.getElementById('regPassConfirm').value = '';
+
+            setTimeout(() => {
+                document.getElementById('loginMsg').parentElement.style.display = 'block';
+                document.getElementById('regForm').style.display = 'none';
+                document.getElementById('loginMsg').innerHTML = '<div class="alert alert-success">✅ Conta criada! Aguarde aprovação do administrador.</div>';
+            }, 3000);
         }
-
-        document.getElementById('regMsg').innerHTML = '<div class="alert alert-success">✅ Cadastro realizado! Aguarde aprovação do administrador.</div>';
-        document.getElementById('regNome').value = '';
-        document.getElementById('regEmail').value = '';
-        document.getElementById('regTel').value = '';
-        document.getElementById('regNeg').value = '';
-        document.getElementById('regPass').value = '';
-        document.getElementById('regPassConfirm').value = '';
-
-        setTimeout(() => {
-            document.getElementById('loginMsg').parentElement.style.display = 'block';
-            document.getElementById('regForm').style.display = 'none';
-            document.getElementById('loginMsg').innerHTML = '<div class="alert alert-success">✅ Conta criada! Aguarde aprovação do administrador.</div>';
-        }, 3000);
     });
 }
 
@@ -674,7 +915,7 @@ async function showFaturas() {
             <td contenteditable="true" onblur="editarFatura(${inv.id}, 'valor', parseFloat(this.innerText))">${inv.valor}§
             <td contenteditable="true" onblur="editarFatura(${inv.id}, 'data', this.innerText)">${inv.data}§
             <td>${inv.pago ? '✅ Pago' : '⏳ Pendente'}§
-            <td><button class="btn-primary" onclick="togglePagoFatura(${inv.id}, ${!inv.pago})">${inv.pago ? 'Pendente' : 'Pago'}</button> <button class="btn-danger" onclick="deleteFatura(${inv.id})">🗑️</button>§
+            <td class="table-actions"><button class="btn-primary" onclick="togglePagoFatura(${inv.id}, ${!inv.pago})">${inv.pago ? 'Pendente' : 'Pago'}</button> <button class="btn-danger" onclick="deleteFatura(${inv.id})">🗑️</button>§
         `;
     });
     table += '}</div>';
@@ -734,7 +975,7 @@ async function showClientes() {
             <td contenteditable="true" onblur="editarCliente(${c.id}, 'nome', this.innerText)">${c.nome}§
             <td contenteditable="true" onblur="editarCliente(${c.id}, 'email', this.innerText)">${c.email}§
             <td contenteditable="true" onblur="editarCliente(${c.id}, 'telefone', this.innerText)">${c.telefone}§
-            <td><button class="btn-danger" onclick="deleteCliente(${c.id})">Remover</button>§
+            <td class="table-actions"><button class="btn-danger" onclick="deleteCliente(${c.id})">Remover</button>§
         `;
     });
     table += '}</div>';
@@ -789,7 +1030,7 @@ async function showProdutos() {
             <td contenteditable="true" onblur="editarProduto(${p.id}, 'nome', this.innerText)">${p.nome}§
             <td contenteditable="true" onblur="editarProduto(${p.id}, 'sku', this.innerText)">${p.sku || '-'}§
             <td contenteditable="true" onblur="editarProduto(${p.id}, 'preco', parseFloat(this.innerText))">${p.preco}§
-            <td><button class="btn-danger" onclick="deleteProduto(${p.id})">Remover</button>§
+            <td class="table-actions"><button class="btn-danger" onclick="deleteProduto(${p.id})">Remover</button>§
         `;
     });
     table += '}</div>';
@@ -844,13 +1085,13 @@ async function showAdminPanel() {
     
     const pendingDiv = document.getElementById('pendingList');
     if (pendingData?.length) {
-        let html = '<div class="table-wrapper">能able> <th>Nome</th><th>Email/Telefone</th><th>Negócio</th><th>Ação</th>  ·';
+        let html = '<div class="table-wrapper">能able> <th>Nome</th><th>Email/Telefone</th><th>Empresa</th><th>Ação</th>  ·';
         pendingData.forEach((p) => {
             html += `§
-                <td contenteditable="true">${p.nome}§
-                <td contenteditable="true">${p.email} / ${p.telefone || '-'}§
-                <td contenteditable="true">${p.negocio || '-'}§
-                <td><button class="btn-primary" onclick="approveUser('${p.email}')">✅ Aprovar</button> <button class="btn-danger" onclick="rejectUser('${p.email}')">❌ Rejeitar</button>§
+                <td>${p.nome}§
+                <td>${p.email} / ${p.telefone || '-'}§
+                <td>${p.negocio || '-'}§
+                <td class="table-actions"><button class="btn-primary" onclick="approveUser('${p.email}')">✅ Aprovar</button> <button class="btn-danger" onclick="rejectUser('${p.email}')">❌ Rejeitar</button>§
             `;
         });
         html += '}</div>';
@@ -861,14 +1102,14 @@ async function showAdminPanel() {
     
     const approvedDiv = document.getElementById('approvedList');
     if (merchantsData?.length) {
-        let html = '<div class="table-wrapper">能able> <th>Nome</th><th>Email/Telefone</th><th>Negócio</th><th>Senha</th><th>Ação</th>  ·';
+        let html = '<div class="table-wrapper">能able> <th>Nome</th><th>Email/Telefone</th><th>Empresa</th><th>Senha</th><th>Ação</th>  ·';
         merchantsData.forEach((u) => {
             html += `§
-                <td contenteditable="true">${u.nome}§
-                <td contenteditable="true">${u.email} / ${u.telefone || '-'}§
-                <td contenteditable="true">${u.negocio || '-'}§
+                <td>${u.nome}§
+                <td>${u.email} / ${u.telefone || '-'}§
+                <td>${u.negocio || '-'}§
                 <td>🔒 ${u.senha}§
-                <td><button class="btn-danger" onclick="deleteMerchant('${u.email}')">🗑️ Excluir</button>§
+                <td class="table-actions"><button class="btn-danger" onclick="deleteMerchant('${u.email}')">🗑️ Excluir</button>§
             `;
         });
         html += '}</div>';
@@ -912,7 +1153,7 @@ document.getElementById('darkBtn').addEventListener('click', () => {
     document.body.classList.toggle('dark');
     localStorage.setItem('dark', document.body.classList.contains('dark') ? 'dark' : '');
 });
-document.getElementById('helpBtn').addEventListener('click', () => alert("📘 V-Gest v8.0 (Supabase)\n\nADMIN: admin@v-gest.ao / admin123\n- Gerencia comerciantes\n- Dados na nuvem\n\nCLIENTE:\n- Cria conta → aguarda aprovação\n- Gerencia seus próprios dados\n\nSuporte: WhatsApp 954 289 109"));
+document.getElementById('helpBtn').addEventListener('click', () => alert("📘 V-Gest v11.0\n\n✅ APROVAÇÃO AUTOMÁTICA: Clientes da Videira's são aprovados automaticamente!\n\nADMIN: admin@v-gest.ao / admin123\n- Gerencia comerciantes\n- Altera senha\n\nCLIENTE:\n- Cria conta → se for cliente Videira's, aprovação automática\n- Esqueceu a senha? Use 'Recuperar senha'\n\nSuporte: WhatsApp 954 289 109"));
 
 if (localStorage.getItem('dark') === 'dark') document.body.classList.add('dark');
 const savedUser = localStorage.getItem('currentUser');
