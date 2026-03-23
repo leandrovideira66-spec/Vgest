@@ -106,7 +106,6 @@
             width: 100%;
         }
 
-        /* Header */
         .header {
             display: flex;
             justify-content: space-between;
@@ -182,46 +181,6 @@
             font-size: 1.8rem;
             font-weight: bold;
         }
-        .trend { font-size: 0.75rem; margin-top: 8px; }
-        .trend.up { color: var(--success); }
-        .trend.down { color: var(--danger); }
-
-        /* Planos */
-        .planos-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 20px;
-            margin: 20px 0;
-        }
-        .plano-card {
-            background: var(--card);
-            border-radius: 20px;
-            padding: 24px;
-            text-align: center;
-            box-shadow: var(--shadow);
-            border: 2px solid transparent;
-            transition: all 0.3s;
-        }
-        .plano-card:hover { transform: translateY(-5px); }
-        .plano-card.recomendado { border-color: var(--gold); }
-        .plano-card h3 { font-size: 1.5rem; margin-bottom: 10px; }
-        .plano-card .preco { font-size: 2rem; font-weight: bold; color: var(--gold); margin: 15px 0; }
-        .plano-card .preco small { font-size: 0.8rem; }
-        .plano-card ul { list-style: none; margin: 20px 0; text-align: left; }
-        .plano-card ul li { padding: 8px 0; display: flex; align-items: center; gap: 8px; }
-        .plano-card ul li i.fa-check { color: var(--success); }
-        .plano-card ul li i.fa-times { color: var(--danger); }
-        .btn-assinar {
-            background: var(--gold);
-            color: var(--primary);
-            border: none;
-            padding: 12px 24px;
-            border-radius: 40px;
-            font-weight: bold;
-            cursor: pointer;
-            width: 100%;
-            margin-top: 10px;
-        }
 
         /* Tabelas */
         .table-wrapper {
@@ -289,10 +248,18 @@
             cursor: pointer;
             font-size: 0.8rem;
         }
+        .btn-warning {
+            background: var(--warning);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+        }
 
         .form-group { margin-bottom: 16px; position: relative; }
         .form-group label { display: block; margin-bottom: 6px; font-weight: 500; }
-        .form-group input, .form-group select {
+        .form-group input, .form-group select, .form-group textarea {
             width: 100%;
             padding: 12px;
             border: 1px solid var(--border);
@@ -305,6 +272,7 @@
         .alert-success { background: #d1fae5; color: #065f46; }
         .alert-error { background: #fee2e2; color: #991b1b; }
         .alert-warning { background: #fef3c7; color: #92400e; }
+        .alert-info { background: #dbeafe; color: #1e40af; }
 
         .loading {
             position: fixed;
@@ -354,6 +322,20 @@
         }
         .overlay.active { display: block; }
 
+        /* Termos */
+        .termos-container {
+            max-width: 800px;
+            margin: 20px auto;
+            background: var(--card);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+        }
+        .termos-container h2 { color: var(--primary); margin-bottom: 20px; }
+        .termos-container h3 { color: var(--gold); margin: 20px 0 10px; }
+        .termos-container ul { margin-left: 20px; }
+        .termos-container li { margin: 8px 0; }
+
         @media (max-width: 768px) {
             .sidebar { width: 260px; }
             .dashboard-grid { grid-template-columns: 1fr; }
@@ -386,7 +368,7 @@
         </div>
         <div id="content"></div>
         <footer>
-            <p>© 2026 Videira's Assessoria Empresarial - V-Gest v13.0</p>
+            <p>© 2026 Videira's Assessoria Empresarial - V-Gest v14.0</p>
             <p><i class="fas fa-map-marker-alt"></i> Luanda, Angola | <i class="fab fa-instagram"></i> @videira.assessoria</p>
             <p>leandrovideira66@gmail.com</p>
         </footer>
@@ -408,6 +390,7 @@ let currentUser = null;
 let currentMerchantId = null;
 let currentPlano = null;
 let currentAssinatura = null;
+let termoAceite = false;
 
 const ADMIN_EMAIL = 'admin@v-gest.ao';
 const ADMIN_PASS = 'admin123';
@@ -418,6 +401,122 @@ const PLANOS = {
     premium: { nome: 'Premium', preco: 12000, periodo: 'mensal', features: { ia: true, relatorios: true, suporte: 'chat', offline: 72 } },
     max: { nome: 'Max', preco: 20000, periodo: 'mensal', features: { ia: true, relatorios: true, suporte: 'prioritario', offline: 168, ocr: true } }
 };
+
+// ==================== VERIFICAÇÃO DE BLOQUEIO ====================
+async function isMerchantBlocked(merchantId) {
+    const { data, error } = await supabaseClient
+        .from('blocked_merchants')
+        .select('*')
+        .eq('merchant_id', merchantId)
+        .eq('ativo', true)
+        .single();
+    
+    return data !== null;
+}
+
+async function getBlockedMerchants() {
+    const { data } = await supabaseClient
+        .from('blocked_merchants')
+        .select('*, merchants(nome, email, telefone, negocio)')
+        .eq('ativo', true);
+    return data || [];
+}
+
+async function blockMerchant(merchantId, motivo, adminEmail) {
+    const { error } = await supabaseClient
+        .from('blocked_merchants')
+        .insert([{ merchant_id: merchantId, motivo, bloqueado_por: adminEmail, ativo: true }]);
+    return !error;
+}
+
+async function unblockMerchant(blockId) {
+    const { error } = await supabaseClient
+        .from('blocked_merchants')
+        .update({ ativo: false, data_desbloqueio: new Date().toISOString() })
+        .eq('id', blockId);
+    return !error;
+}
+
+// ==================== TERMOS DE USO ====================
+function showTermos(aposLogin = false) {
+    document.getElementById('headerActions').style.display = 'none';
+    document.getElementById('content').innerHTML = `
+        <div class="termos-container">
+            <h2><i class="fas fa-file-contract"></i> Termos e Condições de Uso</h2>
+            <p><strong>Última atualização:</strong> 23 de Março de 2026</p>
+            
+            <h3>1. Aceitação dos Termos</h3>
+            <p>Ao aceder e utilizar a plataforma V-Gest, o utilizador declara ter lido, compreendido e aceitado integralmente estes Termos e Condições.</p>
+            
+            <h3>2. Obrigações do Utilizador</h3>
+            <ul>
+                <li>Manter os dados da empresa atualizados (NIF, Alvará, Certidão Comercial)</li>
+                <li>Não utilizar a plataforma para atividades ilegais ou fraudulentas</li>
+                <li>Não partilhar credenciais de acesso com terceiros não autorizados</li>
+                <li>Não inserir informações falsas ou enganosas</li>
+                <li>Cumprir as leis fiscais angolanas (declaração de impostos, emissão de faturas)</li>
+                <li>Não utilizar o sistema para difamar, assediar ou prejudicar outros utilizadores</li>
+            </ul>
+            
+            <h3>3. Condutas Proibidas</h3>
+            <ul>
+                <li>Tentar aceder a dados de outros comerciantes sem autorização</li>
+                <li>Utilizar a plataforma para concorrência desleal</li>
+                <li>Praticar spam ou envio de mensagens não solicitadas</li>
+                <li>Manipular ou falsificar informações financeiras</li>
+                <li>Utilizar a plataforma para atividades não declaradas à AGT</li>
+            </ul>
+            
+            <h3>4. Bloqueio e Suspensão</h3>
+            <p>A Videira's Assessoria reserva-se o direito de suspender ou bloquear qualquer comerciante que:</p>
+            <ul>
+                <li>Violar qualquer uma das cláusulas deste regulamento</li>
+                <li>Estiver com NIF suspenso ou irregularidades fiscais</li>
+                <li>Utilizar o sistema para práticas fraudulentas</li>
+                <li>Não pagar a assinatura dentro do prazo estipulado</li>
+                <li>For identificado como risco à integridade da plataforma</li>
+            </ul>
+            
+            <h3>5. Privacidade e Dados</h3>
+            <p>Os dados inseridos na plataforma são de propriedade do comerciante, mas podem ser utilizados pela Videira's para:</p>
+            <ul>
+                <li>Melhorar a experiência do utilizador</li>
+                <li>Oferecer suporte personalizado</li>
+                <li>Gerar relatórios anónimos para análise de mercado</li>
+                <li>Notificações sobre prazos fiscais e vencimentos</li>
+            </ul>
+            
+            <h3>6. Renovação e Cancelamento</h3>
+            <p>O plano de assinatura é renovado automaticamente mensalmente. O cancelamento pode ser solicitado com 7 dias de antecedência, sem reembolso de valores já pagos.</p>
+            
+            <h3>7. Alterações nos Termos</h3>
+            <p>A Videira's poderá alterar estes termos a qualquer momento, notificando os utilizadores com 15 dias de antecedência.</p>
+            
+            <div style="margin-top: 30px; text-align: center;">
+                <button class="btn-primary" id="aceitarTermos"><i class="fas fa-check"></i> Aceito os Termos e Condições</button>
+                <button class="btn-danger" id="recusarTermos" style="margin-left: 10px;"><i class="fas fa-times"></i> Não Aceito (Sair)</button>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('aceitarTermos')?.addEventListener('click', async () => {
+        if (currentUser && !currentUser.isAdmin) {
+            await supabaseClient
+                .from('merchants')
+                .update({ termos_aceites: true, data_aceite_termos: new Date().toISOString() })
+                .eq('email', currentUser.email);
+        }
+        termoAceite = true;
+        localStorage.setItem('termosAceites', 'true');
+        document.getElementById('headerActions').style.display = 'flex';
+        await renderMenu();
+        showDashboard();
+    });
+    
+    document.getElementById('recusarTermos')?.addEventListener('click', () => {
+        logout();
+    });
+}
 
 // ==================== VERIFICAÇÃO OFFLINE ====================
 function verificarAcessoOffline() {
@@ -437,6 +536,14 @@ function verificarAcessoOffline() {
 // ==================== VERIFICAÇÃO DE ASSINATURA ====================
 async function verificarAssinatura() {
     if (!currentUser || currentUser.isAdmin) return true;
+    
+    // Verificar se está bloqueado
+    const bloqueado = await isMerchantBlocked(currentMerchantId);
+    if (bloqueado) {
+        alert('❌ A sua conta foi bloqueada por violação dos Termos de Uso. Contacte o suporte para mais informações.');
+        logout();
+        return false;
+    }
     
     const { data: assinatura } = await supabaseClient
         .from('assinaturas')
@@ -459,10 +566,8 @@ async function verificarAssinatura() {
     const dataFim = new Date(assinatura.data_fim);
     const diffDias = Math.ceil((dataFim - hoje) / (1000 * 60 * 60 * 24));
     
-    // Atualizar badge
     document.getElementById('planoBadge').innerHTML = `${PLANOS[assinatura.plano].nome} | Expira em ${diffDias} dias`;
     
-    // Notificações de expiração
     if (diffDias <= 30 && diffDias > 0) {
         if (!localStorage.getItem(`aviso_${diffDias}_dias`)) {
             showMessage(`⚠️ Seu plano ${PLANOS[assinatura.plano].nome} expira em ${diffDias} dias. Renove para continuar usando.`, 'warning');
@@ -503,17 +608,6 @@ async function chamarIA(prompt) {
         console.error('Erro IA:', error);
         return "Serviço de IA temporariamente indisponível.";
     }
-}
-
-async function sugerirPreco(produtoNome) {
-    if (currentPlano === 'basico') return;
-    const sugestao = await chamarIA(`Sugira um preço de venda para o produto "${produtoNome}" no mercado angolano. Responda apenas com o valor em Kz.`);
-    alert(`💡 Sugestão de preço para ${produtoNome}: ${sugestao}`);
-}
-
-async function analisarDocumento(texto) {
-    if (currentPlano !== 'max') return "Funcionalidade exclusiva do plano Max";
-    return await chamarIA(`Analise este documento e extraia as informações mais importantes: ${texto}`);
 }
 
 // ==================== FUNÇÕES AUXILIARES ====================
@@ -559,6 +653,7 @@ function logout() {
     currentPlano = null;
     localStorage.removeItem('currentUser');
     localStorage.removeItem('ultimoLogin');
+    localStorage.removeItem('termosAceites');
     document.getElementById('headerActions').style.display = 'none';
     showLogin();
 }
@@ -652,52 +747,46 @@ async function isClienteVideira(nome, email, telefone, empresa) {
     return cliente !== null;
 }
 
-// ==================== FUNÇÕES DE PLANOS ====================
+// ==================== PLANOS ====================
 async function mostrarPlanos() {
     document.getElementById('content').innerHTML = `
         <h2><i class="fas fa-crown"></i> Escolha o seu Plano</h2>
-        <div class="planos-container">
-            <div class="plano-card">
+        <div class="dashboard-grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
+            <div class="card">
                 <h3>Básico</h3>
-                <div class="preco">5.000 Kz <small>/mês</small></div>
-                <ul>
-                    <li><i class="fas fa-check"></i> Faturas ilimitadas</li>
-                    <li><i class="fas fa-check"></i> Gestão de clientes</li>
-                    <li><i class="fas fa-check"></i> Produtos/estoque</li>
-                    <li><i class="fas fa-times"></i> Relatórios avançados</li>
-                    <li><i class="fas fa-times"></i> IA Assistente</li>
-                    <li><i class="fas fa-check"></i> Offline: 48h</li>
+                <div class="value">5.000 Kz <small style="font-size:0.8rem;">/mês</small></div>
+                <ul style="margin-top:15px; list-style:none;">
+                    <li><i class="fas fa-check" style="color:var(--success);"></i> Faturas ilimitadas</li>
+                    <li><i class="fas fa-check" style="color:var(--success);"></i> Gestão de clientes</li>
+                    <li><i class="fas fa-times" style="color:var(--danger);"></i> IA Assistente</li>
+                    <li><i class="fas fa-check" style="color:var(--success);"></i> Offline: 48h</li>
                 </ul>
-                <button class="btn-assinar" onclick="assinarPlano('basico')">Assinar Básico</button>
+                <button class="btn-primary" onclick="assinarPlano('basico')" style="width:100%; margin-top:15px;">Assinar</button>
             </div>
-            <div class="plano-card recomendado">
-                <h3>Premium</h3>
-                <div class="preco">12.000 Kz <small>/mês</small></div>
-                <ul>
-                    <li><i class="fas fa-check"></i> Tudo do Básico</li>
-                    <li><i class="fas fa-check"></i> Relatórios avançados</li>
-                    <li><i class="fas fa-check"></i> IA Assistente</li>
-                    <li><i class="fas fa-check"></i> Sugestões de preços</li>
-                    <li><i class="fas fa-check"></i> Chat suporte</li>
-                    <li><i class="fas fa-check"></i> Offline: 72h</li>
+            <div class="card" style="border:2px solid var(--gold);">
+                <h3>Premium <span style="font-size:0.7rem;">⭐ Recomendado</span></h3>
+                <div class="value">12.000 Kz <small style="font-size:0.8rem;">/mês</small></div>
+                <ul style="margin-top:15px; list-style:none;">
+                    <li><i class="fas fa-check" style="color:var(--success);"></i> Tudo do Básico</li>
+                    <li><i class="fas fa-check" style="color:var(--success);"></i> IA Assistente</li>
+                    <li><i class="fas fa-check" style="color:var(--success);"></i> Relatórios avançados</li>
+                    <li><i class="fas fa-check" style="color:var(--success);"></i> Offline: 72h</li>
                 </ul>
-                <button class="btn-assinar" onclick="assinarPlano('premium')">Assinar Premium</button>
+                <button class="btn-primary" onclick="assinarPlano('premium')" style="width:100%; margin-top:15px;">Assinar</button>
             </div>
-            <div class="plano-card">
+            <div class="card">
                 <h3>Max</h3>
-                <div class="preco">20.000 Kz <small>/mês</small></div>
-                <ul>
-                    <li><i class="fas fa-check"></i> Tudo do Premium</li>
-                    <li><i class="fas fa-check"></i> OCR documentos</li>
-                    <li><i class="fas fa-check"></i> IA avançada</li>
-                    <li><i class="fas fa-check"></i> Suporte prioritário</li>
-                    <li><i class="fas fa-check"></i> Análise preditiva</li>
-                    <li><i class="fas fa-check"></i> Offline: 7 dias</li>
+                <div class="value">20.000 Kz <small style="font-size:0.8rem;">/mês</small></div>
+                <ul style="margin-top:15px; list-style:none;">
+                    <li><i class="fas fa-check" style="color:var(--success);"></i> Tudo do Premium</li>
+                    <li><i class="fas fa-check" style="color:var(--success);"></i> IA Avançada + OCR</li>
+                    <li><i class="fas fa-check" style="color:var(--success);"></i> Suporte prioritário</li>
+                    <li><i class="fas fa-check" style="color:var(--success);"></i> Offline: 7 dias</li>
                 </ul>
-                <button class="btn-assinar" onclick="assinarPlano('max')">Assinar Max</button>
+                <button class="btn-primary" onclick="assinarPlano('max')" style="width:100%; margin-top:15px;">Assinar</button>
             </div>
         </div>
-        <p style="text-align: center; margin-top: 20px;"><i class="fas fa-info-circle"></i> Teste grátis de 30 dias disponível para novos clientes!</p>
+        <p style="text-align:center; margin-top:20px;"><i class="fas fa-info-circle"></i> Teste grátis de 30 dias disponível para novos clientes!</p>
     `;
 }
 
@@ -706,7 +795,6 @@ async function assinarPlano(plano) {
     const dataFim = new Date();
     dataFim.setMonth(dataFim.getMonth() + 1);
     
-    // Verificar se já tem assinatura
     const { data: existing } = await supabaseClient
         .from('assinaturas')
         .select('*')
@@ -747,13 +835,14 @@ async function renderMenu() {
     let html = '';
     if (currentUser.isAdmin) {
         const pendingCount = await getPendingCount();
+        const blockedCount = (await getBlockedMerchants()).length;
         html += `<button data-page="admin"><i class="fas fa-user-check"></i> Aprovar Comerciantes ${pendingCount > 0 ? `<span class="badge">${pendingCount}</span>` : ''}</button>`;
+        html += `<button data-page="bloqueados"><i class="fas fa-ban"></i> Bloqueados ${blockedCount > 0 ? `<span class="badge">${blockedCount}</span>` : ''}</button>`;
         html += `<button data-page="dashboard"><i class="fas fa-chart-line"></i> Dashboard Admin</button>`;
         html += `<button data-page="relatorios"><i class="fas fa-file-alt"></i> Relatórios</button>`;
         html += `<button data-page="planos"><i class="fas fa-crown"></i> Planos</button>`;
         html += `<button data-page="config"><i class="fas fa-cog"></i> Configurações</button>`;
     } else {
-        const data = await loadMerchantData();
         const temIA = currentPlano && (currentPlano === 'premium' || currentPlano === 'max');
         html += `<button data-page="dashboard"><i class="fas fa-chart-line"></i> Dashboard</button>`;
         html += `<button data-page="faturas"><i class="fas fa-file-invoice-dollar"></i> Faturas</button>`;
@@ -775,6 +864,12 @@ async function renderMenu() {
 async function showPage(page) {
     if (!currentUser) { showLogin(); return; }
     
+    // Verificar termos (apenas para clientes não admin)
+    if (!currentUser.isAdmin && !termoAceite && !localStorage.getItem('termosAceites')) {
+        showTermos();
+        return;
+    }
+    
     // Verificar acesso offline
     if (!verificarAcessoOffline()) return;
     
@@ -792,6 +887,7 @@ async function showPage(page) {
     else if (page === 'contabilidade') showContabilidade();
     else if (page === 'relatorios') showRelatorios();
     else if (page === 'admin') showAdminPanel();
+    else if (page === 'bloqueados') showBloqueadosPanel();
     else if (page === 'planos') mostrarPlanos();
     else if (page === 'ia') showIAAssistente();
     else if (page === 'config') showConfig();
@@ -870,7 +966,7 @@ window.analisarDocumentoIA = async () => {
     const texto = document.getElementById('iaDocumentoTexto').value;
     if (!texto) return alert('Cole o texto do documento');
     showLoading(true);
-    const resposta = await analisarDocumento(texto);
+    const resposta = await chamarIA(`Analise este documento e extraia as informações mais importantes: ${texto}`);
     document.getElementById('iaResposta').style.display = 'block';
     document.getElementById('iaRespostaTexto').innerHTML = resposta;
     showLoading(false);
@@ -946,6 +1042,7 @@ function showLogin() {
             currentUser = { email: ADMIN_EMAIL, isAdmin: true, name: 'Administrador' };
             localStorage.setItem('currentUser', JSON.stringify(currentUser));
             document.getElementById('headerActions').style.display = 'flex';
+            termoAceite = true;
             await renderMenu();
             showDashboard();
             return;
@@ -973,6 +1070,17 @@ function showLogin() {
             localStorage.setItem('currentUser', JSON.stringify(currentUser));
             document.getElementById('headerActions').style.display = 'flex';
             await renderMenu();
+            
+            // Verificar se já aceitou os termos
+            if (merchant.termos_aceites) {
+                termoAceite = true;
+                localStorage.setItem('termosAceites', 'true');
+            } else {
+                termoAceite = false;
+                showTermos(true);
+                return;
+            }
+            
             await verificarAssinatura();
             showDashboard();
             return;
@@ -1114,7 +1222,7 @@ function showLogin() {
         if (isCliente) {
             const { error } = await supabaseClient
                 .from('merchants')
-                .insert([{ nome, email, telefone: tel, negocio: empresa, senha, aprovado: true }]);
+                .insert([{ nome, email, telefone: tel, negocio: empresa, senha, aprovado: true, termos_aceites: false }]);
             
             if (error) {
                 showMessage('Erro ao registrar. Tente novamente.', 'error', 'regMsg');
@@ -1125,7 +1233,7 @@ function showLogin() {
             setTimeout(() => {
                 document.getElementById('loginMsg').parentElement.style.display = 'block';
                 document.getElementById('regForm').style.display = 'none';
-                document.getElementById('loginMsg').innerHTML = '<div class="alert alert-success">✅ Conta aprovada! Faça login.</div>';
+                document.getElementById('loginMsg').innerHTML = '<div class="alert alert-success">✅ Conta aprovada! Faça login e aceite os termos.</div>';
             }, 3000);
         } else {
             const { error } = await supabaseClient
@@ -1137,7 +1245,6 @@ function showLogin() {
                 return;
             }
             
-            // Notificação WhatsApp
             const mensagem = `🆕 *Nova Solicitação de Cadastro no V-Gest!*%0A%0A👤 *Nome:* ${nome}%0A📧 *Email:* ${email}%0A📱 *Telefone:* ${tel}%0A🏢 *Empresa:* ${empresa}%0A%0A⏳ Aguardando aprovação no sistema.`;
             window.open(`https://wa.me/244954289109?text=${mensagem}`, '_blank');
             
@@ -1161,21 +1268,13 @@ async function showDashboard() {
     if (currentUser.isAdmin) {
         const totalComerciantes = await getMerchantsCount();
         const pendentes = await getPendingCount();
+        const blocked = await getBlockedMerchants();
         document.getElementById('content').innerHTML = `
             <h2><i class="fas fa-chart-line"></i> Dashboard Administrativo</h2>
             <div class="dashboard-grid">
-                <div class="card">
-                    <h3>Comerciantes Ativos</h3>
-                    <div class="value">${totalComerciantes}</div>
-                </div>
-                <div class="card">
-                    <h3>Solicitações Pendentes</h3>
-                    <div class="value">${pendentes}</div>
-                </div>
-                <div class="card">
-                    <h3>Total Faturado</h3>
-                    <div class="value">0 Kz</div>
-                </div>
+                <div class="card"><h3>Comerciantes Ativos</h3><div class="value">${totalComerciantes}</div></div>
+                <div class="card"><h3>Solicitações Pendentes</h3><div class="value">${pendentes}</div></div>
+                <div class="card"><h3>Comerciantes Bloqueados</h3><div class="value">${blocked.length}</div></div>
             </div>
         `;
     } else {
@@ -1187,23 +1286,11 @@ async function showDashboard() {
         document.getElementById('content').innerHTML = `
             <h2><i class="fas fa-chart-line"></i> Dashboard - ${currentUser.name}</h2>
             <div class="dashboard-grid">
-                <div class="card">
-                    <h3>VENDAS DO MÊS</h3>
-                    <div class="value">${totalVendas.toLocaleString()} Kz</div>
-                </div>
-                <div class="card">
-                    <h3>FATURAS PENDENTES</h3>
-                    <div class="value">${pendentes.toLocaleString()} Kz</div>
-                </div>
-                <div class="card">
-                    <h3>MEUS CLIENTES</h3>
-                    <div class="value">${totalClientes}</div>
-                </div>
+                <div class="card"><h3>VENDAS DO MÊS</h3><div class="value">${totalVendas.toLocaleString()} Kz</div></div>
+                <div class="card"><h3>FATURAS PENDENTES</h3><div class="value">${pendentes.toLocaleString()} Kz</div></div>
+                <div class="card"><h3>MEUS CLIENTES</h3><div class="value">${totalClientes}</div></div>
             </div>
-            <div class="card">
-                <h3><i class="fas fa-calendar-alt"></i> Próximo Vencimento Fiscal</h3>
-                <p>IVA - Dia 15 (faltam 4 dias)</p>
-            </div>
+            <div class="card"><h3><i class="fas fa-calendar-alt"></i> Próximo Vencimento Fiscal</h3><p>IVA - Dia 15 (faltam 4 dias)</p></div>
         `;
     }
 }
@@ -1219,20 +1306,20 @@ async function showFaturas() {
         </div>
         <div class="table-wrapper">
             <table id="faturasTable">
-                <thead><tr><th>Cliente</th><th>Valor (Kz)</th><th>Data</th><th>Status</th><th>Ações</th></tr></thead>
+                <thead> <th>Cliente</th><th>Valor (Kz)</th><th>Data</th><th>Status</th><th>Ações</th> </thead>
                 <tbody id="faturasBody"></tbody>
-            </table>
+            没人
         </div>
     `;
     
     const tbody = document.getElementById('faturasBody');
     if (!data?.invoices || data.invoices.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5">Nenhuma fatura registada.</td></tr>';
+        tbody.innerHTML = '§<td colspan="5">Nenhuma fatura registada.§</tr>';
         return;
     }
     
     tbody.innerHTML = data.invoices.map(inv => `
-        <tr>
+         <tr>
             <td class="editable" contenteditable="true" onblur="editarFatura(${inv.id}, 'cliente', this.innerText)">${inv.cliente}</td>
             <td class="editable" contenteditable="true" onblur="editarFatura(${inv.id}, 'valor', parseFloat(this.innerText))">${inv.valor.toLocaleString()} Kz</td>
             <td>${inv.data}</td>
@@ -1241,7 +1328,7 @@ async function showFaturas() {
                 <button class="btn-primary" onclick="togglePagoFatura(${inv.id}, ${!inv.pago})"><i class="fas fa-check"></i> ${inv.pago ? 'Pendente' : 'Pago'}</button>
                 <button class="btn-danger" onclick="deleteFatura(${inv.id})"><i class="fas fa-trash"></i></button>
             </td>
-        </tr>
+         </tr>
     `).join('');
 }
 
@@ -1310,25 +1397,25 @@ async function showClientes() {
         </div>
         <div class="table-wrapper">
             <table>
-                <thead><tr><th>Nome</th><th>Email</th><th>Telefone</th><th>Ações</th></tr></thead>
+                <thead> <th>Nome</th><th>Email</th><th>Telefone</th><th>Ações</th> </thead>
                 <tbody id="clientesBody"></tbody>
-            </table>
+            没人
         </div>
     `;
     
     const tbody = document.getElementById('clientesBody');
     if (!data?.customers || data.customers.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4">Nenhum cliente cadastrado.</td></tr>';
+        tbody.innerHTML = '§<td colspan="4">Nenhum cliente cadastrado.§</tr>';
         return;
     }
     
     tbody.innerHTML = data.customers.map(c => `
-        <tr>
+         <tr>
             <td class="editable" contenteditable="true" onblur="editarCliente(${c.id}, 'nome', this.innerText)">${c.nome}</td>
             <td class="editable" contenteditable="true" onblur="editarCliente(${c.id}, 'email', this.innerText)">${c.email || '-'}</td>
             <td class="editable" contenteditable="true" onblur="editarCliente(${c.id}, 'telefone', this.innerText)">${c.telefone || '-'}</td>
             <td><button class="btn-danger" onclick="deleteCliente(${c.id})"><i class="fas fa-trash"></i></button></td>
-        </tr>
+         </tr>
     `).join('');
 }
 
@@ -1375,26 +1462,26 @@ async function showProdutos() {
             <button class="btn-primary" onclick="addProduto()"><i class="fas fa-plus"></i> Adicionar</button>
         </div>
         <div class="table-wrapper">
-            <table>
-                <thead><tr><th>Produto</th><th>SKU</th><th>Preço (Kz)</th><th>Ações</th></tr></thead>
+            能able>
+                <thead> <th>Produto</th><th>SKU</th><th>Preço (Kz)</th><th>Ações</th> </thead>
                 <tbody id="produtosBody"></tbody>
-            </table>
+            没人
         </div>
     `;
     
     const tbody = document.getElementById('produtosBody');
     if (!data?.products || data.products.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4">Nenhum produto cadastrado.</td></tr>';
+        tbody.innerHTML = '§<td colspan="4">Nenhum produto cadastrado.§</td>';
         return;
     }
     
     tbody.innerHTML = data.products.map(p => `
-        <tr>
+          <tr>
             <td class="editable" contenteditable="true" onblur="editarProduto(${p.id}, 'nome', this.innerText)">${p.nome}</td>
             <td class="editable" contenteditable="true" onblur="editarProduto(${p.id}, 'sku', this.innerText)">${p.sku || '-'}</td>
             <td class="editable" contenteditable="true" onblur="editarProduto(${p.id}, 'preco', parseFloat(this.innerText))">${p.preco.toLocaleString()} Kz</td>
             <td><button class="btn-danger" onclick="deleteProduto(${p.id})"><i class="fas fa-trash"></i></button></td>
-        </tr>
+          </tr>
     `).join('');
 }
 
@@ -1468,12 +1555,12 @@ async function showRelatorios() {
             <h2><i class="fas fa-file-alt"></i> Relatórios - Faturação por Comerciante</h2>
             <div class="table-wrapper">
                 <table>
-                    <thead><tr><th>Comerciante</th><th>Empresa</th><th>Total Vendas (Kz)</th><th>Nº Faturas</th> </thead>
+                    <thead><tr><th>Comerciante</th><th>Empresa</th><th>Total Vendas (Kz)</th><th>Nº Faturas</th></tr></thead>
                     <tbody>
                         ${relatorio.map(r => `<tr><td>${r.nome}</td><td>${r.empresa}</td><td>${r.totalVendas.toLocaleString()}</td><td>${r.numFaturas}</td></tr>`).join('')}
                         ${relatorio.length === 0 ? '<tr><td colspan="4">Nenhum dado disponível</td></tr>' : ''}
                     </tbody>
-                没人
+                </table>
             </div>
             <button class="btn-primary" onclick="exportarRelatorioAdmin()"><i class="fas fa-file-excel"></i> Exportar Relatório</button>
         `;
@@ -1552,26 +1639,32 @@ async function showAdminPanel() {
         <div id="adminMsg"></div>
         <h3><i class="fas fa-clock"></i> Solicitações Pendentes (${pendingData?.length || 0})</h3>
         <div class="table-wrapper">
-            能able>
-                <thead> <th>Nome</th><th>Email/Telefone</th><th>Empresa</th><th>Ações</th> </thead>
+            <table>
+                <thead><tr><th>Nome</th><th>Email/Telefone</th><th>Empresa</th><th>Ações</th></tr></thead>
                 <tbody id="pendingList"></tbody>
-            没人
+            </table>
         </div>
         <h3><i class="fas fa-check-circle"></i> Comerciantes Aprovados (${merchantsData?.length || 0})</h3>
         <div class="table-wrapper">
-            能able>
-                <thead> <th>Nome</th><th>Email/Telefone</th><th>Empresa</th><th>Senha</th><th>Ações</th> </thead>
+            <table>
+                <thead><tr><th>Nome</th><th>Email/Telefone</th><th>Empresa</th><th>Senha</th><th>Ações</th></tr></thead>
                 <tbody id="approvedList"></tbody>
-            没人
+            </table>
         </div>
     `;
     
     const pendingBody = document.getElementById('pendingList');
     if (pendingData?.length) {
         pendingBody.innerHTML = pendingData.map(p => `
-            <tr><td>${p.nome}</td><td>${p.email} / ${p.telefone || '-'}</td><td>${p.negocio || '-'}</td>
-            <td><button class="btn-primary" onclick="approveUser('${p.email}')"><i class="fas fa-check"></i> Aprovar</button>
-            <button class="btn-danger" onclick="rejectUser('${p.email}')"><i class="fas fa-times"></i> Rejeitar</button></td></tr>
+            <tr>
+                <td>${p.nome}</td>
+                <td>${p.email} / ${p.telefone || '-'}</td>
+                <td>${p.negocio || '-'}</td>
+                <td>
+                    <button class="btn-primary" onclick="approveUser('${p.email}')"><i class="fas fa-check"></i> Aprovar</button>
+                    <button class="btn-danger" onclick="rejectUser('${p.email}')"><i class="fas fa-times"></i> Rejeitar</button>
+                </td>
+            </tr>
         `).join('');
     } else {
         pendingBody.innerHTML = '<tr><td colspan="4">Nenhuma solicitação pendente</td></tr>';
@@ -1580,19 +1673,87 @@ async function showAdminPanel() {
     const approvedBody = document.getElementById('approvedList');
     if (merchantsData?.length) {
         approvedBody.innerHTML = merchantsData.map(m => `
-            <tr><td>${m.nome}</td><td>${m.email} / ${m.telefone || '-'}</td><td>${m.negocio || '-'}</td>
-            <td>🔒 ${m.senha}</td>
-            <td><button class="btn-danger" onclick="deleteMerchant('${m.email}')"><i class="fas fa-trash"></i> Excluir</button></td></tr>
+            <tr>
+                <td>${m.nome}</td>
+                <td>${m.email} / ${m.telefone || '-'}</td>
+                <td>${m.negocio || '-'}</td>
+                <td>🔒 ${m.senha}</td>
+                <td>
+                    <button class="btn-warning" onclick="blockMerchantByEmail('${m.email}', 'Violação dos Termos de Uso')"><i class="fas fa-ban"></i> Bloquear</button>
+                    <button class="btn-danger" onclick="deleteMerchant('${m.email}')"><i class="fas fa-trash"></i> Excluir</button>
+                </td>
+            </tr>
         `).join('');
     } else {
         approvedBody.innerHTML = '<tr><td colspan="5">Nenhum comerciante aprovado</td></tr>';
     }
 }
 
+// ==================== BLOQUEADOS PANEL ====================
+async function showBloqueadosPanel() {
+    if (!currentUser?.isAdmin) return;
+    const blocked = await getBlockedMerchants();
+    
+    document.getElementById('content').innerHTML = `
+        <h2><i class="fas fa-ban"></i> Comerciantes Bloqueados</h2>
+        <div id="adminMsg"></div>
+        <div class="table-wrapper">
+            <table>
+                <thead><tr><th>Nome</th><th>Email/Telefone</th><th>Empresa</th><th>Motivo</th><th>Data Bloqueio</th><th>Ações</th></tr></thead>
+                <tbody id="blockedList"></tbody>
+            </table>
+        </div>
+    `;
+    
+    const blockedBody = document.getElementById('blockedList');
+    if (blocked.length) {
+        blockedBody.innerHTML = blocked.map(b => `
+            <tr>
+                <td>${b.merchants?.nome || 'N/A'}</td>
+                <td>${b.merchants?.email || '-'} / ${b.merchants?.telefone || '-'}</td>
+                <td>${b.merchants?.negocio || '-'}</td>
+                <td>${b.motivo}</td>
+                <td>${new Date(b.data_bloqueio).toLocaleDateString()}</td>
+                <td>
+                    <button class="btn-primary" onclick="unblockMerchantById(${b.id})"><i class="fas fa-unlock"></i> Desbloquear</button>
+                </td>
+            </tr>
+        `).join('');
+    } else {
+        blockedBody.innerHTML = '<tr><td colspan="6">Nenhum comerciante bloqueado</td></tr>';
+    }
+}
+
+window.blockMerchantByEmail = async (email, motivo) => {
+    if (!motivo) motivo = prompt('Motivo do bloqueio:', 'Violação dos Termos de Uso');
+    if (!motivo) return;
+    
+    const { data: merchant } = await supabaseClient.from('merchants').select('id').eq('email', email).single();
+    if (merchant) {
+        const success = await blockMerchant(merchant.id, motivo, currentUser.email);
+        if (success) {
+            showMessage(`✅ Comerciante ${email} bloqueado com sucesso!`, 'success', 'adminMsg');
+            showAdminPanel();
+        } else {
+            showMessage('Erro ao bloquear comerciante', 'error', 'adminMsg');
+        }
+    }
+};
+
+window.unblockMerchantById = async (id) => {
+    const success = await unblockMerchant(id);
+    if (success) {
+        showMessage('✅ Comerciante desbloqueado com sucesso!', 'success', 'adminMsg');
+        showBloqueadosPanel();
+    } else {
+        showMessage('Erro ao desbloquear comerciante', 'error', 'adminMsg');
+    }
+};
+
 window.approveUser = async (email) => {
     const { data: pendingUser } = await supabaseClient.from('pending').select('*').eq('email', email).single();
     if (pendingUser) {
-        await supabaseClient.from('merchants').insert([{ ...pendingUser, aprovado: true }]);
+        await supabaseClient.from('merchants').insert([{ ...pendingUser, aprovado: true, termos_aceites: false }]);
         await supabaseClient.from('pending').delete().eq('email', email);
         showAdminPanel();
         showMessage('✅ Comerciante aprovado!', 'success', 'adminMsg');
@@ -1669,14 +1830,21 @@ document.getElementById('darkBtn').addEventListener('click', () => {
     document.body.classList.toggle('dark');
     localStorage.setItem('dark', document.body.classList.contains('dark') ? 'dark' : '');
 });
-document.getElementById('helpBtn').addEventListener('click', () => alert("📘 V-Gest v13.0\n\n✅ PLANOS: Básico (5k), Premium (12k), Max (20k)\n✅ IA: Gemini integrada (Premium/Max)\n✅ OFFLINE: até 48h (Básico), 72h (Premium), 7 dias (Max)\n✅ NOTIFICAÇÕES: aviso 30 dias antes da expiração\n\nADMIN: admin@v-gest.ao / admin123\n\nSuporte: WhatsApp 954 289 109"));
+document.getElementById('helpBtn').addEventListener('click', () => alert("📘 V-Gest v14.0\n\n✅ TERMOS DE USO: Aceitação obrigatória\n✅ BLOQUEIO: Admin pode bloquear comerciantes\n✅ PLANOS: Básico (5k), Premium (12k), Max (20k)\n✅ IA: Gemini integrada (Premium/Max)\n✅ OFFLINE: até 48h (Básico), 72h (Premium), 7 dias (Max)\n\nADMIN: admin@v-gest.ao / admin123\n\nSuporte: WhatsApp 954 289 109"));
 
 if (localStorage.getItem('dark') === 'dark') document.body.classList.add('dark');
 const savedUser = localStorage.getItem('currentUser');
 if (savedUser) {
     currentUser = JSON.parse(savedUser);
     document.getElementById('headerActions').style.display = 'flex';
-    renderMenu().then(() => showDashboard());
+    renderMenu().then(() => {
+        if (!currentUser.isAdmin && !localStorage.getItem('termosAceites')) {
+            showTermos();
+        } else {
+            termoAceite = true;
+            showDashboard();
+        }
+    });
 } else {
     showLogin();
 }
