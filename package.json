@@ -1,1 +1,15 @@
-
+{
+  "name": "whatsapp-kiesse-bot",
+  "version": "1.0.0",
+  "description": "Bot WhatsApp com IA Gemini - Videira's Assessoria",
+  "main": "bot.js",
+  "scripts": {
+    "start": "node bot.js"
+  },
+  "dependencies": {
+    "whatsapp-web.js": "^1.23.0",
+    "qrcode-terminal": "^0.12.0",
+    "axios": "^1.6.0",
+    "express": "^4.18.0"
+  }
+}
