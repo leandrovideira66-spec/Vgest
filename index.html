@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <meta name="theme-color" content="#0B4F2F">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="V-Gest">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%230B4F2F'/%3E%3Ctext x='50' y='67' text-anchor='middle' fill='%23C6A03E' font-size='50' font-weight='bold'%3EV%3C/text%3E%3C/svg%3E">
     <title>V-Gest | Videira's Assessoria</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -183,6 +187,57 @@
             padding: 32px;
             text-align: center;
         }
+        /* Pop-up de instalação do App */
+        .install-prompt {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            background: var(--card);
+            border-radius: 20px;
+            padding: 16px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            border-left: 4px solid var(--gold);
+            animation: slideUp 0.3s ease;
+        }
+        @keyframes slideUp {
+            from { transform: translateY(100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .install-prompt .icon {
+            font-size: 2rem;
+        }
+        .install-prompt .text {
+            flex: 1;
+        }
+        .install-prompt .text h4 {
+            font-size: 0.9rem;
+            margin-bottom: 4px;
+        }
+        .install-prompt .text p {
+            font-size: 0.75rem;
+            color: var(--text-light);
+        }
+        .install-prompt button {
+            background: var(--gold);
+            color: var(--primary);
+            border: none;
+            padding: 8px 16px;
+            border-radius: 30px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .install-prompt .close-btn {
+            background: transparent;
+            color: var(--text-light);
+            padding: 4px;
+            font-size: 1rem;
+        }
         .whatsapp-float {
             position: fixed;
             bottom: 24px;
@@ -256,7 +311,7 @@
             .header { flex-direction: column; align-items: stretch; }
             .download-app { bottom: 90px; padding: 8px 16px; font-size: 0.8rem; }
             .whatsapp-float { width: 48px; height: 48px; font-size: 24px; }
-            .notification-toast { top: 10px; right: 10px; font-size: 0.8rem; }
+            .install-prompt { left: 10px; right: 10px; bottom: 10px; }
         }
     </style>
 </head>
@@ -301,6 +356,62 @@ const ADMIN_PASS = 'admin123';
 
 // CRIAR CLIENTE SUPABASE
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ==================== PWA INSTALL ====================
+let deferredPrompt;
+let installPromptShown = false;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    
+    // Mostrar pop-up de instalação se o utilizador já está logado
+    if (!installPromptShown && localStorage.getItem('vgest_user')) {
+        setTimeout(() => {
+            showInstallPrompt();
+        }, 3000);
+    }
+});
+
+function showInstallPrompt() {
+    if (installPromptShown || !deferredPrompt) return;
+    
+    const promptDiv = document.createElement('div');
+    promptDiv.className = 'install-prompt';
+    promptDiv.innerHTML = `
+        <div class="icon"><i class="fas fa-mobile-alt"></i></div>
+        <div class="text">
+            <h4>Instalar V-Gest</h4>
+            <p>Tenha acesso rápido como um aplicativo</p>
+        </div>
+        <button id="installBtn">Instalar</button>
+        <button class="close-btn" id="closeInstallBtn"><i class="fas fa-times"></i></button>
+    `;
+    document.body.appendChild(promptDiv);
+    installPromptShown = true;
+    
+    document.getElementById('installBtn').addEventListener('click', async () => {
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            if (outcome === 'accepted') {
+                console.log('Usuário aceitou instalar');
+            }
+            deferredPrompt = null;
+        }
+        promptDiv.remove();
+    });
+    
+    document.getElementById('closeInstallBtn').addEventListener('click', () => {
+        promptDiv.remove();
+        localStorage.setItem('install_prompt_dismissed', 'true');
+    });
+}
+
+// Verificar se já está instalado como PWA
+if (window.matchMedia('(display-mode: standalone)').matches) {
+    console.log('App está instalado e rodando como standalone');
+}
 
 // ==================== ESTADO ====================
 let currentUser = null;
@@ -356,14 +467,12 @@ async function atualizarContadorSolicitacoes() {
     const { count } = await sb.from('pending').select('*', { count: 'exact', head: true });
     pendingCount = count || 0;
     
-    // Verificar se houve nova solicitação
     if (pendingCount > lastPendingCount && lastPendingCount > 0) {
         showNotification(`📋 Nova solicitação de adesão! Total: ${pendingCount}`);
     }
     
     lastPendingCount = pendingCount;
     
-    // Atualizar o botão no menu
     const adminBtn = document.querySelector('.sidebar-nav button[data-page="admin"]');
     if (adminBtn) {
         const badgeSpan = adminBtn.querySelector('.badge');
@@ -381,14 +490,9 @@ async function atualizarContadorSolicitacoes() {
     return pendingCount;
 }
 
-// Iniciar verificação periódica (a cada 10 segundos)
 function iniciarMonitorizacaoSolicitacoes() {
     if (!currentUser?.isAdmin) return;
-    
-    // Verificar imediatamente
     atualizarContadorSolicitacoes();
-    
-    // Verificar a cada 10 segundos
     setInterval(() => {
         if (currentUser?.isAdmin) {
             atualizarContadorSolicitacoes();
@@ -559,12 +663,12 @@ async function showFaturas() {
     if (data?.invoices?.length) {
         for (const inv of data.invoices) {
             html += `实践
-                 <td>${inv.cliente}</td>
-                 <td>${formatMoney(inv.valor)}</td>
-                 <td>${inv.data}</td>
-                 <td><span style="background:${inv.pago ? '#c8e6c9' : '#ffecb3'}; padding:4px 8px; border-radius:20px;">${inv.pago ? 'Pago' : 'Pendente'}</span></td>
-                 <td><button class="btn-primary" onclick="window.toggleFatura('${inv.id}', ${!inv.pago})">${inv.pago ? 'Pendente' : 'Pago'}</button> <button class="btn-danger" onclick="window.delFatura('${inv.id}')">Excluir</button></td>
-             </tr>`;
+                  <td>${inv.cliente}</td>
+                  <td>${formatMoney(inv.valor)}</td>
+                  <td>${inv.data}</td>
+                  <td><span style="background:${inv.pago ? '#c8e6c9' : '#ffecb3'}; padding:4px 8px; border-radius:20px;">${inv.pago ? 'Pago' : 'Pendente'}</span></td>
+                  <td><button class="btn-primary" onclick="window.toggleFatura('${inv.id}', ${!inv.pago})">${inv.pago ? 'Pendente' : 'Pago'}</button> <button class="btn-danger" onclick="window.delFatura('${inv.id}')">Excluir</button></td>
+              </tr>`;
         }
     } else {
         html += `<tr><td colspan="5">Nenhuma fatura</td></tr>`;
@@ -591,10 +695,15 @@ window.delFatura = async (id) => { if (confirm('Tem certeza?')) await sb.from('i
 
 async function showClientes() {
     const data = await loadMerchantData();
-    let html = `${renderWelcome()}<h2>👥 Clientes</h2><button class="btn-primary" onclick="window.novoCliente()">+ Novo Cliente</button><div class="table-wrapper"><table><thead><tr><th>Nome</th><th>Email</th><th>Telefone</th><th>Ações</th></tr></thead><tbody>`;
+    let html = `${renderWelcome()}<h2>👥 Clientes</h2><button class="btn-primary" onclick="window.novoCliente()">+ Novo Cliente</button><div class="table-wrapper">能able><thead> <th>Nome</th><th>Email</th><th>Telefone</th><th>Ações</th> </thead><tbody>`;
     if (data?.customers?.length) {
         for (const c of data.customers) {
-            html += `<tr><td>${c.nome}</td><td>${c.email || '-'}</td><td>${c.telefone || '-'}</td><td><button class="btn-danger" onclick="window.delCliente('${c.id}')">Excluir</button></td></tr>`;
+            html += `实践
+                  <td>${c.nome} --
+                  <td>${c.email || '-'} --
+                  <td>${c.telefone || '-'} --
+                  <td><button class="btn-danger" onclick="window.delCliente('${c.id}')">Excluir</button> --
+               `;
         }
     } else {
         html += `<tr><td colspan="4">Nenhum cliente</td></tr>`;
@@ -621,7 +730,11 @@ async function showProdutos() {
     let html = `${renderWelcome()}<h2>📦 Produtos</h2><button class="btn-primary" onclick="window.novoProduto()">+ Adicionar</button><div class="table-wrapper"><table><thead><tr><th>Produto</th><th>Preço</th><th>Ações</th></tr></thead><tbody>`;
     if (data?.products?.length) {
         for (const p of data.products) {
-            html += `<tr><td>${p.nome}</td><td>${formatMoney(p.preco)}</td><td><button class="btn-danger" onclick="window.delProduto('${p.id}')">Excluir</button></td></tr>`;
+            html += `<tr>
+                  <td>${p.nome}</td>
+                  <td>${formatMoney(p.preco)}</td>
+                  <td><button class="btn-danger" onclick="window.delProduto('${p.id}')">Excluir</button></td>
+              </tr>`;
         }
     } else {
         html += `<tr><td colspan="3">Nenhum produto</td></tr>`;
@@ -722,14 +835,14 @@ window.rejeitar = async (email) => {
 
 async function showBloqueadosPanel() {
     const { data: blocked } = await sb.from('blocked_merchants').select('*, merchants(nome, email)').eq('ativo', true);
-    let html = `${renderWelcome()}<h2>🚫 Bloqueados</h2><div class="table-wrapper">能able><thead> <th>Nome</th><th>Email</th><th>Motivo</th><th>Ações</th> </thead><tbody>`;
+    let html = `${renderWelcome()}<h2>🚫 Bloqueados</h2><div class="table-wrapper"><table><thead><tr><th>Nome</th><th>Email</th><th>Motivo</th><th>Ações</th></tr></thead><tbody>`;
     if (blocked?.length) {
         for (const b of blocked) {
-            html += `实践
-                <td>${b.merchants?.nome || '-'} --
-                <td>${b.merchants?.email || '-'} --
-                <td>${b.motivo} --
-                <td><button class="btn-primary" onclick="window.desbloquear('${b.id}')">Desbloquear</button> --
+            html += `<tr>
+                <td>${b.merchants?.nome || '-'}</td>
+                <td>${b.merchants?.email || '-'}</td>
+                <td>${b.motivo}</td>
+                <td><button class="btn-primary" onclick="window.desbloquear('${b.id}')">Desbloquear</button></td>
             </tr>`;
         }
     } else {
@@ -830,10 +943,10 @@ function showLogin() {
             <div id="regMsg"></div>
             <div class="form-group"><label>Nome completo</label><input id="regNome"></div>
             <div class="form-group"><label>Email</label><input id="regEmail" type="email"></div>
-            <div class="form-group"><label>Telefone</label><input id="regTel"></div>
-            <div class="form-group"><label>Empresa</label><input id="regEmpresa"></div>
+            <div class="form-group"><label>Telefone</label><input id="regTel" placeholder="923456789"></div>
+            <div class="form-group"><label>Nome da empresa</label><input id="regEmpresa"></div>
             <div class="form-group"><label>Senha</label><div style="position:relative;"><input type="password" id="regPass"><i class="fas fa-eye senha-visivel" onclick="toggleSenha('regPass', this)"></i></div></div>
-            <div class="form-group"><label>Confirmar</label><div style="position:relative;"><input type="password" id="regPassConfirm"><i class="fas fa-eye senha-visivel" onclick="toggleSenha('regPassConfirm', this)"></i></div></div>
+            <div class="form-group"><label>Confirmar Senha</label><div style="position:relative;"><input type="password" id="regPassConfirm"><i class="fas fa-eye senha-visivel" onclick="toggleSenha('regPassConfirm', this)"></i></div></div>
             <button class="btn-primary" id="doReg" style="width:100%">Registrar</button>
             <p><a href="#" id="backLogin">← Voltar</a></p>
         </div>
@@ -929,7 +1042,7 @@ function showLogin() {
         if (senha !== conf) return showMessage('As senhas não coincidem', 'error', 'regMsg');
         
         const { error } = await sb.from('pending').insert([{ nome, email, telefone: tel, negocio: empresa, senha }]);
-        if (error) return showMessage('Erro ao registrar', 'error', 'regMsg');
+        if (error) return showMessage('Erro ao registrar: ' + error.message, 'error', 'regMsg');
         
         showMessage('✅ Solicitação enviada! Aguarde aprovação do administrador.', 'success', 'regMsg');
         setTimeout(() => {
@@ -1000,7 +1113,6 @@ async function renderMenu() {
     html += `<button data-page="logout"><i class="fas fa-sign-out-alt"></i> Sair</button>`;
     document.getElementById('nav').innerHTML = html;
     
-    // Atualizar o contador após renderizar o menu
     if (currentUser.isAdmin) {
         await atualizarContadorSolicitacoes();
     }
@@ -1088,6 +1200,13 @@ if (savedUser) {
             iniciarMonitorizacaoSolicitacoes();
         }
         showDashboard();
+        
+        // Mostrar pop-up de instalação se ainda não foi mostrado
+        if (deferredPrompt && !installPromptShown && !localStorage.getItem('install_prompt_dismissed')) {
+            setTimeout(() => {
+                showInstallPrompt();
+            }, 3000);
+        }
     });
 } else {
     showLogin();
