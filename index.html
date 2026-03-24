@@ -3,19 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <meta name="theme-color" content="#0B4F2F">
     <title>V-Gest | Videira's Assessoria</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
         :root {
             --primary: #0B4F2F;
             --gold: #C6A03E;
@@ -28,31 +22,11 @@
             --danger: #dc2626;
             --success: #10b981;
             --warning: #f59e0b;
-            --admin-bg: #1e1e2f;
-            --admin-text: #f1f5f9;
         }
-
-        .plano-basico { --primary: #6c757d; --gold: #adb5bd; }
-        .plano-premium { --primary: #0B4F2F; --gold: #C6A03E; }
-        .plano-max { --primary: #1e3a5f; --gold: #ffc107; }
-        .admin-theme { --primary: #2d2d3a; --gold: #9b87f5; --bg: #1a1a2a; --card: #2d2d3a; --text: #f1f5f9; }
-
-        .dark {
-            --bg: #0f172a;
-            --card: #1e293b;
-            --text: #f1f5f9;
-            --text-light: #94a3b8;
-            --border: #334155;
-        }
-
-        body {
-            background: var(--bg);
-            color: var(--text);
-            transition: background 0.2s;
-        }
-
+        .admin-theme { --primary: #2d2d3a; --gold: #9b87f5; --bg: #1a1a2a; --card: #2d2d3a; --text: #f1f5f9; --text-light: #cbd5e1; --border: #4a4a6a; }
+        .dark { --bg: #0f172a; --card: #1e293b; --text: #f1f5f9; --text-light: #94a3b8; --border: #334155; }
+        body { background: var(--bg); color: var(--text); transition: background 0.2s; }
         .app { display: flex; min-height: 100vh; }
-
         .sidebar {
             width: 280px;
             background: var(--primary);
@@ -65,15 +39,9 @@
             overflow-y: auto;
         }
         .sidebar.open { transform: translateX(0); }
-
-        .sidebar-header {
-            padding: 24px 20px;
-            text-align: center;
-            border-bottom: 1px solid var(--gold);
-        }
+        .sidebar-header { padding: 24px 20px; text-align: center; border-bottom: 1px solid var(--gold); }
         .sidebar-header .logo { font-size: 2.5rem; }
         .sidebar-header h2 { font-size: 1.2rem; margin-top: 8px; }
-
         .sidebar-nav { padding: 20px; }
         .sidebar-nav button {
             width: 100%;
@@ -93,7 +61,6 @@
         }
         .sidebar-nav button:hover { background: rgba(255,255,255,0.15); }
         .sidebar-nav button.active { background: var(--gold); color: var(--primary); font-weight: 600; }
-
         .badge {
             background: var(--danger);
             color: white;
@@ -103,15 +70,14 @@
             font-weight: bold;
             min-width: 22px;
             text-align: center;
+            animation: pulse 1s infinite;
         }
-
-        .main {
-            flex: 1;
-            margin-left: 0;
-            padding: 20px;
-            width: 100%;
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
         }
-
+        .main { flex: 1; margin-left: 0; padding: 20px; width: 100%; }
         .header {
             display: flex;
             justify-content: space-between;
@@ -137,37 +103,13 @@
             align-items: center;
             gap: 8px;
         }
-        .datetime {
-            font-size: 0.85rem;
-            background: var(--bg);
-            padding: 6px 12px;
-            border-radius: 30px;
-            color: var(--text);
-        }
+        .datetime { font-size: 0.85rem; background: var(--bg); padding: 6px 12px; border-radius: 30px; }
         .header-actions { display: flex; gap: 12px; }
-        .icon-btn {
-            background: var(--bg);
-            border: 1px solid var(--border);
-            padding: 8px 16px;
-            border-radius: 30px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            color: var(--text);
-        }
-        .plan-badge {
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.7rem;
-            font-weight: bold;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-        }
+        .icon-btn { background: var(--bg); border: 1px solid var(--border); padding: 8px 16px; border-radius: 30px; cursor: pointer; }
+        .plan-badge { padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: bold; display: inline-flex; align-items: center; gap: 6px; }
         .plan-badge.basico { background: #6c757d; color: white; }
         .plan-badge.premium { background: var(--gold); color: var(--primary); }
         .plan-badge.max { background: #ffc107; color: #1e3a5f; }
-        .plan-badge.admin { background: #9b87f5; color: #1e1e2f; }
-
         .welcome-card {
             background: var(--card);
             border-radius: 20px;
@@ -176,9 +118,6 @@
             border-left: 4px solid var(--gold);
             box-shadow: var(--shadow);
         }
-        .welcome-card h2 { font-size: 1.2rem; margin-bottom: 8px; }
-        .welcome-card p { color: var(--text-light); font-size: 0.9rem; }
-
         .dashboard-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -192,40 +131,12 @@
             border-left: 4px solid var(--gold);
             box-shadow: var(--shadow);
         }
-        .card h3 {
-            font-size: 0.85rem;
-            color: var(--text-light);
-            margin-bottom: 8px;
-            text-transform: uppercase;
-        }
-        .card .value {
-            font-size: 1.8rem;
-            font-weight: bold;
-        }
-
-        .table-wrapper {
-            overflow-x: auto;
-            background: var(--card);
-            border-radius: 16px;
-            margin: 20px 0;
-            box-shadow: var(--shadow);
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        th, td {
-            padding: 14px 12px;
-            text-align: left;
-            border-bottom: 1px solid var(--border);
-        }
-        th {
-            background: var(--primary);
-            color: white;
-            font-weight: 600;
-        }
+        .card .value { font-size: 1.8rem; font-weight: bold; }
+        .table-wrapper { overflow-x: auto; background: var(--card); border-radius: 16px; margin: 20px 0; box-shadow: var(--shadow); }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 14px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+        th { background: var(--primary); color: white; }
         tr:hover { background: rgba(198,160,62,0.05); }
-
         .btn-primary {
             background: var(--gold);
             color: var(--primary);
@@ -234,38 +145,12 @@
             border-radius: 40px;
             font-weight: bold;
             cursor: pointer;
-            font-size: 0.9rem;
-            margin: 4px;
             display: inline-flex;
             align-items: center;
             gap: 8px;
         }
-        .btn-secondary {
-            background: var(--card);
-            border: 1px solid var(--border);
-            padding: 10px 20px;
-            border-radius: 40px;
-            cursor: pointer;
-            margin: 4px;
-        }
-        .btn-danger {
-            background: var(--danger);
-            color: white;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 20px;
-            cursor: pointer;
-            font-size: 0.8rem;
-        }
-        .btn-warning {
-            background: var(--warning);
-            color: white;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 20px;
-            cursor: pointer;
-        }
-
+        .btn-secondary { background: var(--card); border: 1px solid var(--border); padding: 10px 20px; border-radius: 40px; cursor: pointer; }
+        .btn-danger { background: var(--danger); color: white; border: none; padding: 6px 12px; border-radius: 20px; cursor: pointer; }
         .form-group { margin-bottom: 16px; position: relative; }
         .form-group label { display: block; margin-bottom: 6px; font-weight: 500; }
         .form-group input, .form-group select, .form-group textarea {
@@ -276,25 +161,28 @@
             background: var(--card);
             color: var(--text);
         }
-
         .alert { padding: 12px; border-radius: 12px; margin-bottom: 16px; }
         .alert-success { background: #d1fae5; color: #065f46; }
         .alert-error { background: #fee2e2; color: #991b1b; }
         .alert-warning { background: #fef3c7; color: #92400e; }
-        .alert-info { background: #dbeafe; color: #1e40af; }
-
-        .loading {
+        .modal-kiesse {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.7);
+            background: rgba(0,0,0,0.9);
+            z-index: 3000;
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 2000;
-            color: white;
-            font-size: 1.2rem;
         }
-
+        .modal-kiesse-content {
+            background: linear-gradient(135deg, var(--primary), #1e6b3e);
+            color: white;
+            max-width: 450px;
+            width: 90%;
+            border-radius: 32px;
+            padding: 32px;
+            text-align: center;
+        }
         .whatsapp-float {
             position: fixed;
             bottom: 24px;
@@ -312,16 +200,21 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.2);
             z-index: 99;
         }
-
-        footer {
-            margin-top: 48px;
-            padding: 20px;
-            text-align: center;
-            border-top: 1px solid var(--border);
-            font-size: 0.75rem;
-            color: var(--text-light);
+        .download-app {
+            position: fixed;
+            bottom: 100px;
+            right: 24px;
+            background: var(--gold);
+            color: var(--primary);
+            padding: 12px 20px;
+            border-radius: 40px;
+            font-weight: bold;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            z-index: 99;
         }
-
         .overlay {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
@@ -330,75 +223,40 @@
             display: none;
         }
         .overlay.active { display: block; }
-
-        /* Modal IA Kiesse */
-        .modal-kiesse {
+        .senha-visivel {
+            position: absolute;
+            right: 12px;
+            top: 38px;
+            cursor: pointer;
+            color: var(--text-light);
+        }
+        .notification-toast {
             position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.8);
-            z-index: 3000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            animation: fadeIn 0.3s ease;
-        }
-        .modal-kiesse-content {
-            background: linear-gradient(135deg, var(--primary), #1e6b3e);
-            color: white;
-            max-width: 450px;
-            width: 90%;
-            border-radius: 32px;
-            padding: 32px;
-            text-align: center;
-            animation: bounce 0.5s ease;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-        }
-        .modal-kiesse-content .kiesse-icon {
-            font-size: 4rem;
-            margin-bottom: 16px;
-        }
-        .modal-kiesse-content h3 {
-            font-size: 1.8rem;
-            margin-bottom: 16px;
-        }
-        .modal-kiesse-content input {
-            width: 100%;
-            padding: 14px;
-            border-radius: 40px;
-            border: none;
-            margin: 20px 0;
-            font-size: 1rem;
-            text-align: center;
-        }
-        .modal-kiesse-content button {
+            top: 20px;
+            right: 20px;
             background: var(--gold);
             color: var(--primary);
-            border: none;
-            padding: 12px 24px;
-            border-radius: 40px;
-            font-weight: bold;
+            padding: 12px 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: slideDown 0.3s ease;
             cursor: pointer;
-            font-size: 1rem;
         }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+        @keyframes slideDown {
+            from { transform: translateY(-100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
         }
-        @keyframes bounce {
-            0% { transform: scale(0.8); opacity: 0; }
-            80% { transform: scale(1.05); }
-            100% { transform: scale(1); opacity: 1; }
-        }
-
         @media (max-width: 768px) {
             .sidebar { width: 260px; }
             .dashboard-grid { grid-template-columns: 1fr; }
             .header { flex-direction: column; align-items: stretch; }
-            .datetime { text-align: center; }
+            .download-app { bottom: 90px; padding: 8px 16px; font-size: 0.8rem; }
+            .whatsapp-float { width: 48px; height: 48px; font-size: 24px; }
+            .notification-toast { top: 10px; right: 10px; font-size: 0.8rem; }
         }
     </style>
 </head>
@@ -413,7 +271,6 @@
         </div>
         <nav class="sidebar-nav" id="nav"></nav>
     </aside>
-
     <main class="main">
         <div class="header">
             <button class="menu-btn" id="menuBtn"><i class="fas fa-bars"></i> Menu</button>
@@ -425,61 +282,183 @@
             </div>
         </div>
         <div id="content"></div>
-        <footer>
-            <p>© 2026 Videira's Assessoria Empresarial - V-Gest v18.0 | IA Kiesse</p>
+        <footer style="margin-top:48px; padding:20px; text-align:center; border-top:1px solid var(--border); font-size:0.75rem;">
+            <p>© 2026 Videira's Assessoria Empresarial - V-Gest v20.0 | IA Kiesse</p>
             <p><i class="fas fa-map-marker-alt"></i> Luanda, Angola | <i class="fab fa-instagram"></i> @videira.assessoria</p>
         </footer>
     </main>
 </div>
+<a id="downloadAppBtn" href="#" class="download-app" style="display: none;"><i class="fas fa-download"></i> Baixar App</a>
 <a href="https://wa.me/244954289109?text=Olá! Vim do V-Gest e preciso de ajuda" class="whatsapp-float" target="_blank"><i class="fab fa-whatsapp"></i></a>
 
 <script>
-// ==================== CONFIGURAÇÃO SUPABASE ====================
+// ==================== CONFIGURAÇÃO ====================
 const SUPABASE_URL = 'https://mjpdlsmgztaybqlbslwd.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qcGRsc21nenRheWJxbGJzbHdkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxODYxMDAsImV4cCI6MjA4OTc2MjEwMH0.4wnFn7fhs5QiYSVMnj3O4lnyXRR63cahGfxOqAtTJok';
-
 const GEMINI_API_KEY = 'AIzaSyAlNisBaeL78_BMYGd_u2mRi9LsGf-N2tY';
-const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const ADMIN_EMAIL = 'admin@v-gest.ao';
+const ADMIN_PASS = 'admin123';
 
+// CRIAR CLIENTE SUPABASE
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ==================== ESTADO ====================
 let currentUser = null;
 let currentMerchantId = null;
 let currentPlano = null;
 let currentEmpresa = null;
-let kiesseNome = null;
 let saudacaoDesativada = false;
+let pendingCount = 0;
+let lastPendingCount = 0;
 
-const ADMIN_EMAIL = 'admin@v-gest.ao';
-const ADMIN_PASS = 'admin123';
-
-// Frases motivacionais
-const frasesMotivacionais = [
-    "💪 O sucesso é a soma de pequenos esforços repetidos dia após dia.",
-    "📈 Grandes negócios nascem de pequenas ideias bem executadas.",
-    "🚀 O único lugar onde o sucesso vem antes do trabalho é no dicionário.",
-    "💡 Empreender é transformar problemas em oportunidades.",
-    "🌟 Acredite nos seus sonhos, eles são o combustível do seu negócio.",
-    "📊 Cada cliente satisfeito é o seu melhor marketing.",
-    "🎯 Foco e consistência são as chaves para escalar qualquer negócio.",
-    "🤝 O networking abre portas que o dinheiro não consegue abrir."
-];
-
-function getFraseMotivacional() {
-    return frasesMotivacionais[Math.floor(Math.random() * frasesMotivacionais.length)];
+// ==================== UTILITÁRIOS ====================
+function showMessage(msg, type, targetId = 'loginMsg') {
+    const div = document.getElementById(targetId);
+    if (div) {
+        div.innerHTML = `<div class="alert alert-${type}">${msg}</div>`;
+        setTimeout(() => div.innerHTML = '', 4000);
+    } else {
+        alert(msg);
+    }
 }
 
-function getSaudacaoHorario() {
+function showNotification(msg) {
+    const notification = document.createElement('div');
+    notification.className = 'notification-toast';
+    notification.innerHTML = `<i class="fas fa-bell"></i> ${msg}`;
+    document.body.appendChild(notification);
+    setTimeout(() => notification.remove(), 5000);
+    notification.onclick = () => {
+        notification.remove();
+        showPage('admin');
+    };
+}
+
+function formatMoney(value) { return (value || 0).toLocaleString() + ' Kz'; }
+function getSaudacao() {
     const hora = new Date().getHours();
     if (hora < 12) return "Bom dia";
     if (hora < 18) return "Boa tarde";
     return "Boa noite";
 }
 
-// ==================== IA KIESSE MODAL ====================
+const frases = [
+    "💪 O sucesso é a soma de pequenos esforços repetidos dia após dia.",
+    "📈 Grandes negócios nascem de pequenas ideias bem executadas.",
+    "🚀 O único lugar onde o sucesso vem antes do trabalho é no dicionário.",
+    "💡 Empreender é transformar problemas em oportunidades."
+];
+
+// ==================== CONTADOR DE SOLICITAÇÕES ====================
+async function atualizarContadorSolicitacoes() {
+    if (!currentUser?.isAdmin) return;
+    
+    const { count } = await sb.from('pending').select('*', { count: 'exact', head: true });
+    pendingCount = count || 0;
+    
+    // Verificar se houve nova solicitação
+    if (pendingCount > lastPendingCount && lastPendingCount > 0) {
+        showNotification(`📋 Nova solicitação de adesão! Total: ${pendingCount}`);
+    }
+    
+    lastPendingCount = pendingCount;
+    
+    // Atualizar o botão no menu
+    const adminBtn = document.querySelector('.sidebar-nav button[data-page="admin"]');
+    if (adminBtn) {
+        const badgeSpan = adminBtn.querySelector('.badge');
+        if (pendingCount > 0) {
+            if (badgeSpan) {
+                badgeSpan.textContent = pendingCount;
+            } else {
+                adminBtn.innerHTML += `<span class="badge">${pendingCount}</span>`;
+            }
+        } else {
+            if (badgeSpan) badgeSpan.remove();
+        }
+    }
+    
+    return pendingCount;
+}
+
+// Iniciar verificação periódica (a cada 10 segundos)
+function iniciarMonitorizacaoSolicitacoes() {
+    if (!currentUser?.isAdmin) return;
+    
+    // Verificar imediatamente
+    atualizarContadorSolicitacoes();
+    
+    // Verificar a cada 10 segundos
+    setInterval(() => {
+        if (currentUser?.isAdmin) {
+            atualizarContadorSolicitacoes();
+        }
+    }, 10000);
+}
+
+// ==================== IA ====================
+async function chamarGemini(prompt) {
+    try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+        });
+        const data = await response.json();
+        if (data.error) return "Erro na IA: " + data.error.message;
+        return data.candidates?.[0]?.content?.parts?.[0]?.text || "Não consegui responder.";
+    } catch (error) {
+        return "Erro de conexão com a IA. Verifica a tua internet.";
+    }
+}
+
+function temAcessoIA() {
+    return currentUser?.isAdmin || currentPlano === 'premium' || currentPlano === 'max';
+}
+
+// ==================== SUPABASE ====================
+async function loadMerchantData() {
+    if (!currentUser || currentUser.isAdmin) return null;
+    const { data: merchant } = await sb.from('merchants').select('id, nome, negocio').eq('email', currentUser.email).single();
+    if (!merchant) return null;
+    currentMerchantId = merchant.id;
+    currentEmpresa = merchant.negocio || merchant.nome;
+    const [customers, invoices, products] = await Promise.all([
+        sb.from('customers').select('*').eq('merchant_id', merchant.id),
+        sb.from('invoices').select('*').eq('merchant_id', merchant.id),
+        sb.from('products').select('*').eq('merchant_id', merchant.id)
+    ]);
+    return { customers: customers.data || [], invoices: invoices.data || [], products: products.data || [] };
+}
+
+async function getAssinatura() {
+    if (!currentUser || currentUser.isAdmin) return null;
+    const { data } = await sb.from('assinaturas').select('*').eq('merchant_id', currentMerchantId).eq('ativo', true).single();
+    return data;
+}
+
+async function getBlockedCount() {
+    const { count } = await sb.from('blocked_merchants').select('*', { count: 'exact', head: true }).eq('ativo', true);
+    return count || 0;
+}
+
+// ==================== UI ====================
+function renderWelcome() {
+    const nomeSalvo = localStorage.getItem(`kiesse_nome_${currentUser?.email}`);
+    const nome = currentUser?.isAdmin ? 'Administrador' : (nomeSalvo || currentEmpresa || currentUser?.name);
+    return `
+        <div class="welcome-card">
+            <h2>${getSaudacao()}, ${nome}! 👋</h2>
+            <p><i class="fas fa-quote-left"></i> ${frases[Math.floor(Math.random() * frases.length)]}</p>
+        </div>
+    `;
+}
+
 function mostrarIAKiesse() {
     const jaViu = localStorage.getItem(`kiesse_visto_${currentUser.email}`);
-    const temAcessoIA = currentUser.isAdmin || currentPlano === 'premium' || currentPlano === 'max';
-    
-    if (!jaViu && temAcessoIA) {
+    const temAcesso = currentUser?.isAdmin || currentPlano === 'premium' || currentPlano === 'max';
+    if (!jaViu && temAcesso) {
         const modal = document.createElement('div');
         modal.className = 'modal-kiesse';
         modal.innerHTML = `
@@ -487,19 +466,14 @@ function mostrarIAKiesse() {
                 <div class="kiesse-icon">🤖✨</div>
                 <h3>Olá! Eu sou a Kiesse</h3>
                 <p>Sua assistente inteligente para ajudar no seu negócio!</p>
-                <p style="font-size: 0.9rem; opacity: 0.9;">Posso sugerir preços, analisar vendas, documentos e muito mais.</p>
-                <input type="text" id="kiesseNomeInput" placeholder="Como gostaria que eu te chamasse?" autocomplete="off">
+                <input type="text" id="kiesseNomeInput" placeholder="Como gostaria que eu te chamasse?">
                 <button id="kiesseConfirmarBtn">Vamos começar!</button>
             </div>
         `;
         document.body.appendChild(modal);
-        
         document.getElementById('kiesseConfirmarBtn').addEventListener('click', () => {
             const nome = document.getElementById('kiesseNomeInput').value.trim();
-            if (nome) {
-                kiesseNome = nome;
-                localStorage.setItem(`kiesse_nome_${currentUser.email}`, nome);
-            }
+            if (nome) localStorage.setItem(`kiesse_nome_${currentUser.email}`, nome);
             localStorage.setItem(`kiesse_visto_${currentUser.email}`, 'true');
             modal.remove();
         });
@@ -508,182 +482,502 @@ function mostrarIAKiesse() {
 
 function mostrarSaudacaoDiaria() {
     const hoje = new Date().toDateString();
-    const ultimaSaudacao = localStorage.getItem(`ultima_saudacao_${currentUser?.email}`);
-    const temAcessoIA = currentUser?.isAdmin || currentPlano === 'premium' || currentPlano === 'max';
-    
-    if (!saudacaoDesativada && temAcessoIA && ultimaSaudacao !== hoje) {
-        const nomeSalvo = localStorage.getItem(`kiesse_nome_${currentUser?.email}`) || currentEmpresa || currentUser?.name;
-        const saudacao = getSaudacaoHorario();
-        const frase = getFraseMotivacional();
-        
+    const ultima = localStorage.getItem(`ultima_saudacao_${currentUser?.email}`);
+    const temAcesso = currentUser?.isAdmin || currentPlano === 'premium' || currentPlano === 'max';
+    if (!saudacaoDesativada && temAcesso && ultima !== hoje) {
+        const nome = localStorage.getItem(`kiesse_nome_${currentUser?.email}`) || currentEmpresa || currentUser?.name;
         setTimeout(() => {
             const msgDiv = document.createElement('div');
-            msgDiv.style.cssText = 'position:fixed; bottom:100px; right:20px; background:var(--gold); color:var(--primary); padding:16px 24px; border-radius:20px; max-width:300px; z-index:1000; box-shadow:0 4px 12px rgba(0,0,0,0.2); animation:slideUp 0.3s ease; cursor:pointer;';
-            msgDiv.innerHTML = `<i class="fas fa-robot"></i> ${saudacao}, ${nomeSalvo}!<br><small>${frase}</small>`;
+            msgDiv.style.cssText = 'position:fixed; bottom:100px; right:20px; background:var(--gold); color:var(--primary); padding:16px 24px; border-radius:20px; max-width:300px; z-index:1000; box-shadow:0 4px 12px rgba(0,0,0,0.2); cursor:pointer;';
+            msgDiv.innerHTML = `<i class="fas fa-robot"></i> ${getSaudacao()}, ${nome}!<br><small>${frases[Math.floor(Math.random() * frases.length)]}</small>`;
             document.body.appendChild(msgDiv);
-            setTimeout(() => msgDiv.remove(), 8000);
+            setTimeout(() => msgDiv.remove(), 5000);
             msgDiv.onclick = () => msgDiv.remove();
             localStorage.setItem(`ultima_saudacao_${currentUser.email}`, hoje);
         }, 1500);
     }
 }
 
-// ==================== FUNÇÕES IA CORRIGIDAS ====================
-async function chamarGemini(prompt) {
-    if (!GEMINI_API_KEY) return "⚠️ IA não configurada.";
-    try {
-        // URL CORRETA para o modelo gemini-pro
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`;
-        
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{
-                    parts: [{ text: prompt }]
-                }]
-            })
-        });
-        
-        const data = await response.json();
-        
-        if (data.error) {
-            console.error("Erro da API:", data.error);
-            return `Erro: ${data.error.message}`;
+// ==================== PÁGINAS ====================
+async function showDashboard() {
+    const data = await loadMerchantData();
+    const vendas = data?.invoices?.filter(i => i.pago).reduce((s,i) => s + i.valor, 0) || 0;
+    document.getElementById('content').innerHTML = `
+        ${renderWelcome()}
+        <h2><i class="fas fa-chart-line"></i> Dashboard</h2>
+        <div class="dashboard-grid">
+            <div class="card"><h3>VENDAS</h3><div class="value">${formatMoney(vendas)}</div></div>
+            <div class="card"><h3>CLIENTES</h3><div class="value">${data?.customers?.length || 0}</div></div>
+            <div class="card"><h3>PRODUTOS</h3><div class="value">${data?.products?.length || 0}</div></div>
+        </div>
+    `;
+    mostrarSaudacaoDiaria();
+}
+
+async function showIAAssistente() {
+    const data = await loadMerchantData();
+    const vendas = data?.invoices?.filter(i => i.pago).reduce((s,i) => s + i.valor, 0) || 0;
+    document.getElementById('content').innerHTML = `
+        ${renderWelcome()}
+        <h2><i class="fas fa-robot"></i> Assistente IA Kiesse</h2>
+        <div class="dashboard-grid">
+            <div class="card">
+                <h3>💡 Sugestão de Preço</h3>
+                <input type="text" id="iaProduto" placeholder="Ex: Cadeira de Escritório" style="width:100%; padding:10px; margin-bottom:10px; border-radius:12px; border:1px solid var(--border);">
+                <button class="btn-primary" id="btnPrecoIA">Sugerir Preço</button>
+                <div id="iaResposta" style="margin-top:15px; padding:12px; background:var(--bg); border-radius:12px;"></div>
+            </div>
+            <div class="card">
+                <h3>📊 Análise de Vendas</h3>
+                <p>Vendas: <strong>${formatMoney(vendas)}</strong> | ${data?.invoices?.length || 0} faturas</p>
+                <button class="btn-primary" id="btnVendasIA">Analisar Vendas</button>
+                <div id="iaVendasResposta" style="margin-top:15px; padding:12px; background:var(--bg); border-radius:12px;"></div>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('btnPrecoIA')?.addEventListener('click', async () => {
+        const produto = document.getElementById('iaProduto').value;
+        if (!produto) return showMessage('Digite o nome do produto', 'warning', 'loginMsg');
+        if (!temAcessoIA()) return showMessage('IA disponível nos planos Premium e Max', 'warning', 'loginMsg');
+        document.getElementById('iaResposta').innerHTML = '<i class="fas fa-spinner fa-spin"></i> A pensar...';
+        const resp = await chamarGemini(`Sugira um preço de venda para "${produto}" no mercado angolano. Responda com valor em Kz e justificativa.`);
+        document.getElementById('iaResposta').innerHTML = resp;
+    });
+    
+    document.getElementById('btnVendasIA')?.addEventListener('click', async () => {
+        if (!temAcessoIA()) return showMessage('IA disponível nos planos Premium e Max', 'warning', 'loginMsg');
+        document.getElementById('iaVendasResposta').innerHTML = '<i class="fas fa-spinner fa-spin"></i> A analisar...';
+        const resp = await chamarGemini(`Analise estas vendas: Total ${vendas} Kz, ${data?.invoices?.length || 0} faturas. Dê 3 dicas para aumentar vendas.`);
+        document.getElementById('iaVendasResposta').innerHTML = resp;
+    });
+}
+
+async function showFaturas() {
+    const data = await loadMerchantData();
+    let html = `${renderWelcome()}<h2>📄 Faturas</h2><button class="btn-primary" onclick="window.novaFatura()">+ Nova Fatura</button><div class="table-wrapper">能able><thead> <th>Cliente</th><th>Valor</th><th>Data</th><th>Status</th><th>Ações</th> </thead><tbody>`;
+    if (data?.invoices?.length) {
+        for (const inv of data.invoices) {
+            html += `实践
+                 <td>${inv.cliente}</td>
+                 <td>${formatMoney(inv.valor)}</td>
+                 <td>${inv.data}</td>
+                 <td><span style="background:${inv.pago ? '#c8e6c9' : '#ffecb3'}; padding:4px 8px; border-radius:20px;">${inv.pago ? 'Pago' : 'Pendente'}</span></td>
+                 <td><button class="btn-primary" onclick="window.toggleFatura('${inv.id}', ${!inv.pago})">${inv.pago ? 'Pendente' : 'Pago'}</button> <button class="btn-danger" onclick="window.delFatura('${inv.id}')">Excluir</button></td>
+             </tr>`;
         }
-        
-        const textoResposta = data.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (!textoResposta) {
-            return "Desculpa, não consegui gerar uma resposta. Tenta reformular a pergunta.";
+    } else {
+        html += `<tr><td colspan="5">Nenhuma fatura</td></tr>`;
+    }
+    html += `</tbody></table></div>`;
+    document.getElementById('content').innerHTML = html;
+}
+
+window.novaFatura = () => {
+    document.getElementById('content').innerHTML = `${renderWelcome()}<h2>➕ Nova Fatura</h2><div style="max-width:400px"><div class="form-group"><label>Cliente</label><input id="fatCliente"></div><div class="form-group"><label>Valor (Kz)</label><input id="fatValor" type="number"></div><div class="form-group"><label>Data</label><input id="fatData" type="date" value="${new Date().toISOString().split('T')[0]}"></div><button class="btn-primary" onclick="window.salvarFatura()">Salvar</button><button class="btn-secondary" onclick="showFaturas()">Cancelar</button></div>`;
+};
+
+window.salvarFatura = async () => {
+    const cliente = document.getElementById('fatCliente').value;
+    const valor = parseFloat(document.getElementById('fatValor').value);
+    const data = document.getElementById('fatData').value;
+    if (!cliente || !valor) return alert('Preencha os dados');
+    await sb.from('invoices').insert([{ merchant_id: currentMerchantId, cliente, valor, data, pago: false }]);
+    showFaturas();
+};
+
+window.toggleFatura = async (id, pago) => { await sb.from('invoices').update({ pago }).eq('id', id); showFaturas(); };
+window.delFatura = async (id) => { if (confirm('Tem certeza?')) await sb.from('invoices').delete().eq('id', id); showFaturas(); };
+
+async function showClientes() {
+    const data = await loadMerchantData();
+    let html = `${renderWelcome()}<h2>👥 Clientes</h2><button class="btn-primary" onclick="window.novoCliente()">+ Novo Cliente</button><div class="table-wrapper"><table><thead><tr><th>Nome</th><th>Email</th><th>Telefone</th><th>Ações</th></tr></thead><tbody>`;
+    if (data?.customers?.length) {
+        for (const c of data.customers) {
+            html += `<tr><td>${c.nome}</td><td>${c.email || '-'}</td><td>${c.telefone || '-'}</td><td><button class="btn-danger" onclick="window.delCliente('${c.id}')">Excluir</button></td></tr>`;
         }
-        
-        return textoResposta;
-    } catch (error) {
-        console.error("Erro de conexão:", error);
-        return "Erro de conexão com a IA. Verifica a tua internet.";
+    } else {
+        html += `<tr><td colspan="4">Nenhum cliente</td></tr>`;
+    }
+    html += `</tbody></table></div>`;
+    document.getElementById('content').innerHTML = html;
+}
+
+window.novoCliente = () => {
+    document.getElementById('content').innerHTML = `${renderWelcome()}<h2>➕ Novo Cliente</h2><div style="max-width:400px"><div class="form-group"><label>Nome</label><input id="cliNome"></div><div class="form-group"><label>Email</label><input id="cliEmail"></div><div class="form-group"><label>Telefone</label><input id="cliTel"></div><button class="btn-primary" onclick="window.salvarCliente()">Salvar</button><button class="btn-secondary" onclick="showClientes()">Cancelar</button></div>`;
+};
+
+window.salvarCliente = async () => {
+    const nome = document.getElementById('cliNome').value;
+    if (!nome) return alert('Nome obrigatório');
+    await sb.from('customers').insert([{ merchant_id: currentMerchantId, nome, email: document.getElementById('cliEmail').value, telefone: document.getElementById('cliTel').value }]);
+    showClientes();
+};
+
+window.delCliente = async (id) => { if (confirm('Tem certeza?')) await sb.from('customers').delete().eq('id', id); showClientes(); };
+
+async function showProdutos() {
+    const data = await loadMerchantData();
+    let html = `${renderWelcome()}<h2>📦 Produtos</h2><button class="btn-primary" onclick="window.novoProduto()">+ Adicionar</button><div class="table-wrapper"><table><thead><tr><th>Produto</th><th>Preço</th><th>Ações</th></tr></thead><tbody>`;
+    if (data?.products?.length) {
+        for (const p of data.products) {
+            html += `<tr><td>${p.nome}</td><td>${formatMoney(p.preco)}</td><td><button class="btn-danger" onclick="window.delProduto('${p.id}')">Excluir</button></td></tr>`;
+        }
+    } else {
+        html += `<tr><td colspan="3">Nenhum produto</td></tr>`;
+    }
+    html += `</tbody></table></div>`;
+    document.getElementById('content').innerHTML = html;
+}
+
+window.novoProduto = () => {
+    document.getElementById('content').innerHTML = `${renderWelcome()}<h2>➕ Novo Produto</h2><div style="max-width:400px"><div class="form-group"><label>Produto</label><input id="prodNome"></div><div class="form-group"><label>Preço (Kz)</label><input id="prodPreco" type="number"></div><button class="btn-primary" onclick="window.salvarProduto()">Salvar</button><button class="btn-secondary" onclick="showProdutos()">Cancelar</button></div>`;
+};
+
+window.salvarProduto = async () => {
+    const nome = document.getElementById('prodNome').value;
+    const preco = parseFloat(document.getElementById('prodPreco').value);
+    if (!nome) return alert('Nome obrigatório');
+    await sb.from('products').insert([{ merchant_id: currentMerchantId, nome, preco }]);
+    showProdutos();
+};
+
+window.delProduto = async (id) => { if (confirm('Tem certeza?')) await sb.from('products').delete().eq('id', id); showProdutos(); };
+
+async function showContabilidade() {
+    const data = await loadMerchantData();
+    const receitas = data?.invoices?.filter(i => i.pago).reduce((s,i) => s + i.valor, 0) || 0;
+    document.getElementById('content').innerHTML = `
+        ${renderWelcome()}
+        <h2><i class="fas fa-chart-pie"></i> Contabilidade</h2>
+        <div class="dashboard-grid">
+            <div class="card"><h3>RECEITAS</h3><div class="value">${formatMoney(receitas)}</div></div>
+            <div class="card"><h3>DESPESAS</h3><div class="value">${formatMoney(receitas * 0.42)}</div></div>
+            <div class="card"><h3>MARGEM</h3><div class="value">${receitas > 0 ? 58 : 0}%</div></div>
+        </div>
+    `;
+}
+
+async function showPlanos() {
+    document.getElementById('content').innerHTML = `
+        ${renderWelcome()}
+        <h2><i class="fas fa-crown"></i> Planos</h2>
+        <div class="dashboard-grid">
+            <div class="card"><h3>Básico</h3><div class="value">5.000 Kz/mês</div><ul><li>📄 Faturas</li><li>👥 Clientes</li><li>📦 Produtos</li><li>❌ Sem IA</li></ul><button class="btn-primary" onclick="window.assinarPlano('basico')">Assinar</button></div>
+            <div class="card" style="border:2px solid var(--gold);"><h3>Premium ⭐</h3><div class="value">12.000 Kz/mês</div><ul><li>Tudo do Básico</li><li>🤖 IA Kiesse Completa</li></ul><button class="btn-primary" onclick="window.assinarPlano('premium')">Assinar</button></div>
+            <div class="card"><h3>Max</h3><div class="value">20.000 Kz/mês</div><ul><li>Tudo do Premium</li><li>📊 Análise Avançada</li></ul><button class="btn-primary" onclick="window.assinarPlano('max')">Assinar</button></div>
+        </div>
+    `;
+}
+
+window.assinarPlano = async (plano) => {
+    await sb.from('assinaturas').update({ ativo: false }).eq('merchant_id', currentMerchantId).eq('ativo', true);
+    await sb.from('assinaturas').insert([{ merchant_id: currentMerchantId, plano, data_inicio: new Date().toISOString().split('T')[0], data_fim: new Date(Date.now() + 30*24*60*60*1000).toISOString().split('T')[0], ativo: true }]);
+    currentPlano = plano;
+    alert(`Plano ${plano.toUpperCase()} assinado com sucesso!`);
+    showDashboard();
+};
+
+async function showAdminPanel() {
+    if (!currentUser?.isAdmin) return;
+    const { data: pending } = await sb.from('pending').select('*');
+    let html = `${renderWelcome()}<h2>✅ Aprovar Comerciantes</h2><div id="adminMsg"></div>`;
+    
+    if (pending?.length > 0) {
+        html += `<div style="margin-bottom:15px;"><span class="badge" style="background:var(--danger); padding:4px 12px;">${pending.length} nova(s) solicitação(ões)</span></div>`;
+        html += `<div class="table-wrapper"><table><thead><tr><th>Nome</th><th>Email</th><th>Telefone</th><th>Empresa</th><th>Ações</th></tr></thead><tbody>`;
+        for (const p of pending) {
+            html += `<tr>
+                <td>${p.nome}</td>
+                <td>${p.email}</td>
+                <td>${p.telefone || '-'}</td>
+                <td>${p.negocio || '-'}</td>
+                <td><button class="btn-primary" onclick="window.aprovar('${p.email}')">✅ Aprovar</button> <button class="btn-danger" onclick="window.rejeitar('${p.email}')">❌ Rejeitar</button></td>
+            </tr>`;
+        }
+        html += `</tbody></table></div>`;
+    } else {
+        html += `<div class="alert alert-success">✅ Nenhuma solicitação pendente. Todas as contas estão aprovadas!</div>`;
+    }
+    document.getElementById('content').innerHTML = html;
+}
+
+window.aprovar = async (email) => {
+    const { data: u } = await sb.from('pending').select('*').eq('email', email).single();
+    if (u) {
+        await sb.from('merchants').insert([{ ...u, aprovado: true }]);
+        await sb.from('pending').delete().eq('email', email);
+        showMessage('✅ Comerciante aprovado! Ele já pode aceder ao sistema.', 'success', 'adminMsg');
+        await atualizarContadorSolicitacoes();
+        showAdminPanel();
+    }
+};
+
+window.rejeitar = async (email) => {
+    await sb.from('pending').delete().eq('email', email);
+    showMessage('❌ Comerciante rejeitado.', 'warning', 'adminMsg');
+    await atualizarContadorSolicitacoes();
+    showAdminPanel();
+};
+
+async function showBloqueadosPanel() {
+    const { data: blocked } = await sb.from('blocked_merchants').select('*, merchants(nome, email)').eq('ativo', true);
+    let html = `${renderWelcome()}<h2>🚫 Bloqueados</h2><div class="table-wrapper">能able><thead> <th>Nome</th><th>Email</th><th>Motivo</th><th>Ações</th> </thead><tbody>`;
+    if (blocked?.length) {
+        for (const b of blocked) {
+            html += `实践
+                <td>${b.merchants?.nome || '-'} --
+                <td>${b.merchants?.email || '-'} --
+                <td>${b.motivo} --
+                <td><button class="btn-primary" onclick="window.desbloquear('${b.id}')">Desbloquear</button> --
+            </tr>`;
+        }
+    } else {
+        html += `<tr><td colspan="4">Nenhum bloqueado</td></tr>`;
+    }
+    html += `</tbody></table></div>`;
+    document.getElementById('content').innerHTML = html;
+}
+
+window.desbloquear = async (id) => {
+    await sb.from('blocked_merchants').update({ ativo: false }).eq('id', id);
+    showBloqueadosPanel();
+};
+
+function showConfig() {
+    document.getElementById('content').innerHTML = `
+        ${renderWelcome()}
+        <h2>⚙️ Configurações</h2>
+        <div style="max-width:400px">
+            <h3>Alterar Senha</h3>
+            <div id="configMsg"></div>
+            <div class="form-group"><label>Senha Atual</label><div style="position:relative;"><input type="password" id="oldPass"><i class="fas fa-eye senha-visivel" onclick="toggleSenha('oldPass', this)"></i></div></div>
+            <div class="form-group"><label>Nova Senha</label><div style="position:relative;"><input type="password" id="newPass"><i class="fas fa-eye senha-visivel" onclick="toggleSenha('newPass', this)"></i></div></div>
+            <div class="form-group"><label>Confirmar</label><div style="position:relative;"><input type="password" id="confirmPass"><i class="fas fa-eye senha-visivel" onclick="toggleSenha('confirmPass', this)"></i></div></div>
+            <button class="btn-primary" id="changeBtn">Alterar Senha</button>
+            <hr style="margin:20px 0">
+            <h3>Saudação Diária</h3>
+            <label><input type="checkbox" id="desativarSaudacao" ${saudacaoDesativada ? 'checked' : ''}> Desativar saudação da IA</label>
+            <button class="btn-secondary" id="saveSaudacaoBtn">Salvar</button>
+        </div>
+    `;
+    
+    document.getElementById('changeBtn')?.addEventListener('click', async () => {
+        const old = document.getElementById('oldPass').value;
+        const newp = document.getElementById('newPass').value;
+        const conf = document.getElementById('confirmPass').value;
+        if (!old || !newp) return showMessage('Preencha tudo', 'error', 'configMsg');
+        if (newp !== conf) return showMessage('Senhas não coincidem', 'error', 'configMsg');
+        if (currentUser.isAdmin) {
+            if (old === ADMIN_PASS) {
+                showMessage('Senha alterada!', 'success', 'configMsg');
+                setTimeout(() => logout(), 2000);
+            } else showMessage('Senha atual incorreta', 'error', 'configMsg');
+        } else {
+            const { data: m } = await sb.from('merchants').select('senha').eq('email', currentUser.email).single();
+            if (m && m.senha === old) {
+                await sb.from('merchants').update({ senha: newp }).eq('email', currentUser.email);
+                showMessage('Senha alterada! Refaça login', 'success', 'configMsg');
+                setTimeout(() => logout(), 2000);
+            } else showMessage('Senha atual incorreta', 'error', 'configMsg');
+        }
+    });
+    
+    document.getElementById('saveSaudacaoBtn')?.addEventListener('click', () => {
+        saudacaoDesativada = document.getElementById('desativarSaudacao').checked;
+        localStorage.setItem(`saudacao_desativada_${currentUser.email}`, saudacaoDesativada);
+        showMessage('Preferência salva!', 'success', 'configMsg');
+    });
+}
+
+function toggleSenha(inputId, icon) {
+    const input = document.getElementById(inputId);
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
     }
 }
 
-function verificarAcessoIA() {
-    if (currentUser?.isAdmin) return true;
-    if (currentPlano === 'premium' || currentPlano === 'max') return true;
-    return false;
+async function showRelatorios() {
+    const data = await loadMerchantData();
+    document.getElementById('content').innerHTML = `
+        ${renderWelcome()}
+        <h2><i class="fas fa-file-alt"></i> Relatórios</h2>
+        <div class="card"><h3>Resumo</h3><p>Faturas: ${data?.invoices?.length || 0}<br>Vendas: ${formatMoney(data?.invoices?.filter(i => i.pago).reduce((s,i) => s + i.valor, 0) || 0)}<br>Clientes: ${data?.customers?.length || 0}<br>Produtos: ${data?.products?.length || 0}</p></div>
+    `;
 }
 
-async function sugerirPrecoComIA(produtoNome) {
-    if (!verificarAcessoIA()) return "⚠️ A IA Kiesse está disponível apenas nos planos Premium e Max. Assine um desses planos para aceder.";
-    return await chamarGemini(`Sugira um preço de venda para "${produtoNome}" no mercado angolano. Responda com o valor em Kz e uma breve justificativa.`);
-}
-
-async function analisarVendasComIA(dados) {
-    if (!verificarAcessoIA()) return "⚠️ A IA Kiesse está disponível apenas nos planos Premium e Max. Assine um desses planos para aceder.";
-    return await chamarGemini(`Analise estas vendas: Total ${dados.totalVendas} Kz, ${dados.numFaturas} faturas. Dê 3 dicas para aumentar vendas.`);
-}
-
-async function analisarDocumentoIA(texto) {
-    if (!verificarAcessoIA()) return "⚠️ A IA Kiesse está disponível apenas nos planos Premium e Max. Assine um desses planos para aceder.";
-    return await chamarGemini(`Analise este documento: ${texto}. Extraia informações importantes (tipo, empresa, NIF, datas).`);
-}
-
-async function analisarClienteIA(dadosCliente) {
-    if (!verificarAcessoIA()) return "⚠️ A IA Kiesse está disponível apenas nos planos Premium e Max. Assine um desses planos para aceder.";
-    return await chamarGemini(`Analise este cliente: ${dadosCliente}. Dê sugestões para fidelizar e aumentar vendas.`);
-}
-
-async function gerarRelatorioIA(dados) {
-    if (!verificarAcessoIA()) return "⚠️ A IA Kiesse está disponível apenas nos planos Premium e Max. Assine um desses planos para aceder.";
-    return await chamarGemini(`Gere um relatório executivo com base nestes dados: ${dados}. Destaque pontos fortes e áreas de melhoria.`);
-}
-
-// ==================== FUNÇÕES SUPABASE ====================
-async function loadMerchantData() {
-    if (!currentUser || currentUser.isAdmin) return null;
-    const { data: merchant } = await supabaseClient.from('merchants').select('id, nome, negocio').eq('email', currentUser.email).single();
-    if (!merchant) return null;
-    currentMerchantId = merchant.id;
-    currentEmpresa = merchant.negocio || merchant.nome;
-    const [customers, invoices, products] = await Promise.all([
-        supabaseClient.from('customers').select('*').eq('merchant_id', merchant.id),
-        supabaseClient.from('invoices').select('*').eq('merchant_id', merchant.id),
-        supabaseClient.from('products').select('*').eq('merchant_id', merchant.id)
-    ]);
-    return { customers: customers.data || [], invoices: invoices.data || [], products: products.data || [] };
-}
-
-async function getPendingCount() {
-    const { count } = await supabaseClient.from('pending').select('*', { count: 'exact', head: true });
-    return count || 0;
-}
-
-async function getMerchantsCount() {
-    const { count } = await supabaseClient.from('merchants').select('*', { count: 'exact', head: true });
-    return count || 0;
-}
-
-async function getBlockedCount() {
-    const { count } = await supabaseClient.from('blocked_merchants').select('*', { count: 'exact', head: true }).eq('ativo', true);
-    return count || 0;
-}
-
-async function getAssinatura() {
-    if (!currentUser || currentUser.isAdmin) return null;
-    const { data } = await supabaseClient.from('assinaturas').select('*').eq('merchant_id', currentMerchantId).eq('ativo', true).single();
-    return data;
-}
-
-function closeMenu() { sidebar.classList.remove('open'); overlay.classList.remove('active'); }
-function openMenu() { sidebar.classList.add('open'); overlay.classList.add('active'); }
-
-function updateClock() {
-    const now = new Date();
-    const dias = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
-    const diaSemana = dias[now.getDay()];
-    const data = now.toLocaleDateString('pt-PT');
-    const hora = now.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
-    document.getElementById('clock').innerHTML = `${diaSemana}, ${data} - ${hora}`;
-}
-setInterval(updateClock, 1000);
-updateClock();
-
-function showMessage(msg, type, targetId = 'loginMsg') {
-    const div = document.getElementById(targetId);
-    if (div) { div.innerHTML = `<div class="alert alert-${type}">${msg}</div>`; setTimeout(() => div.innerHTML = '', 4000); }
-    else alert(msg);
-}
-
-function logout() {
-    currentUser = null;
-    localStorage.removeItem('currentUser');
+// ==================== LOGIN ====================
+function showLogin() {
     document.getElementById('headerActions').style.display = 'none';
-    showLogin();
-}
-
-// ==================== SAUDAÇÃO ====================
-function showWelcome() {
-    const nomeSalvo = localStorage.getItem(`kiesse_nome_${currentUser?.email}`);
-    const nomeExibido = currentUser.isAdmin ? 'Administrador' : (nomeSalvo || currentEmpresa || currentUser?.name);
-    const saudacao = getSaudacaoHorario();
-    const frase = getFraseMotivacional();
-    return `
-        <div class="welcome-card">
-            <h2>${saudacao}, ${nomeExibido}! 👋</h2>
-            <p><i class="fas fa-quote-left"></i> ${frase}</p>
+    document.getElementById('downloadAppBtn').style.display = 'none';
+    document.getElementById('content').innerHTML = `
+        <div style="max-width:400px; margin:50px auto;">
+            <h2><i class="fas fa-lock"></i> Entrar no V-Gest</h2>
+            <div id="loginMsg"></div>
+            <div class="form-group"><label>Email ou Telefone</label><input type="text" id="loginUser" placeholder="email@exemplo.com ou 923456789"></div>
+            <div class="form-group"><label>Senha</label><div style="position:relative;"><input type="password" id="loginPass"><i class="fas fa-eye senha-visivel" onclick="toggleSenha('loginPass', this)"></i></div></div>
+            <button class="btn-primary" id="doLogin" style="width:100%">Entrar</button>
+            <p style="margin-top:16px; text-align:center;"><a href="#" id="showReg">📝 Criar conta grátis</a> | <a href="#" id="showRec">🔑 Esqueceu a senha?</a></p>
+        </div>
+        <div id="regForm" style="display:none; max-width:400px; margin:20px auto;">
+            <h2>📝 Criar Conta</h2>
+            <div id="regMsg"></div>
+            <div class="form-group"><label>Nome completo</label><input id="regNome"></div>
+            <div class="form-group"><label>Email</label><input id="regEmail" type="email"></div>
+            <div class="form-group"><label>Telefone</label><input id="regTel"></div>
+            <div class="form-group"><label>Empresa</label><input id="regEmpresa"></div>
+            <div class="form-group"><label>Senha</label><div style="position:relative;"><input type="password" id="regPass"><i class="fas fa-eye senha-visivel" onclick="toggleSenha('regPass', this)"></i></div></div>
+            <div class="form-group"><label>Confirmar</label><div style="position:relative;"><input type="password" id="regPassConfirm"><i class="fas fa-eye senha-visivel" onclick="toggleSenha('regPassConfirm', this)"></i></div></div>
+            <button class="btn-primary" id="doReg" style="width:100%">Registrar</button>
+            <p><a href="#" id="backLogin">← Voltar</a></p>
+        </div>
+        <div id="recForm" style="display:none; max-width:400px; margin:20px auto;">
+            <h2>🔑 Recuperar Senha</h2>
+            <div id="recMsg"></div>
+            <div class="form-group"><label>Email</label><input id="recEmail" type="email"></div>
+            <div class="form-group"><label>Nova Senha</label><div style="position:relative;"><input type="password" id="recNewPass"><i class="fas fa-eye senha-visivel" onclick="toggleSenha('recNewPass', this)"></i></div></div>
+            <div class="form-group"><label>Confirmar</label><div style="position:relative;"><input type="password" id="recConfirmPass"><i class="fas fa-eye senha-visivel" onclick="toggleSenha('recConfirmPass', this)"></i></div></div>
+            <button class="btn-primary" id="doRec" style="width:100%">Alterar Senha</button>
+            <p><a href="#" id="backToLogin">← Voltar</a></p>
         </div>
     `;
+
+    document.getElementById('doLogin')?.addEventListener('click', async () => {
+        const userInput = document.getElementById('loginUser').value;
+        const pass = document.getElementById('loginPass').value;
+        
+        if (userInput === ADMIN_EMAIL && pass === ADMIN_PASS) {
+            currentUser = { email: ADMIN_EMAIL, isAdmin: true, name: 'Administrador' };
+            localStorage.setItem('vgest_user', JSON.stringify(currentUser));
+            document.getElementById('headerActions').style.display = 'flex';
+            document.body.classList.add('admin-theme');
+            document.getElementById('downloadAppBtn').style.display = 'flex';
+            await renderMenu();
+            iniciarMonitorizacaoSolicitacoes();
+            showDashboard();
+            return;
+        }
+        
+        let { data: merchant } = await sb.from('merchants').select('*').eq('email', userInput).eq('senha', pass).single();
+        if (!merchant) {
+            const { data: byPhone } = await sb.from('merchants').select('*').eq('telefone', userInput).eq('senha', pass).single();
+            merchant = byPhone;
+        }
+        
+        if (merchant && merchant.aprovado) {
+            currentUser = { email: merchant.email, name: merchant.nome, isAdmin: false };
+            localStorage.setItem('vgest_user', JSON.stringify(currentUser));
+            document.getElementById('headerActions').style.display = 'flex';
+            document.getElementById('downloadAppBtn').style.display = 'flex';
+            await renderMenu();
+            const assinatura = await getAssinatura();
+            currentPlano = assinatura?.plano || 'basico';
+            saudacaoDesativada = localStorage.getItem(`saudacao_desativada_${currentUser.email}`) === 'true';
+            mostrarIAKiesse();
+            showDashboard();
+            return;
+        }
+        
+        const { data: pending } = await sb.from('pending').select('*').eq('email', userInput).single();
+        if (pending) showMessage('⏳ Aguardando aprovação do administrador', 'warning', 'loginMsg');
+        else showMessage('❌ Credenciais inválidas', 'error', 'loginMsg');
+    });
+    
+    document.getElementById('showReg')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        document.querySelector('#content > div:first-child').style.display = 'none';
+        document.getElementById('regForm').style.display = 'block';
+        document.getElementById('recForm').style.display = 'none';
+    });
+    
+    document.getElementById('showRec')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        document.querySelector('#content > div:first-child').style.display = 'none';
+        document.getElementById('regForm').style.display = 'none';
+        document.getElementById('recForm').style.display = 'block';
+    });
+    
+    document.getElementById('backLogin')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        document.querySelector('#content > div:first-child').style.display = 'block';
+        document.getElementById('regForm').style.display = 'none';
+        document.getElementById('recForm').style.display = 'none';
+    });
+    
+    document.getElementById('backToLogin')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        document.querySelector('#content > div:first-child').style.display = 'block';
+        document.getElementById('regForm').style.display = 'none';
+        document.getElementById('recForm').style.display = 'none';
+    });
+    
+    document.getElementById('doReg')?.addEventListener('click', async () => {
+        const nome = document.getElementById('regNome').value;
+        const email = document.getElementById('regEmail').value;
+        const tel = document.getElementById('regTel').value;
+        const empresa = document.getElementById('regEmpresa').value;
+        const senha = document.getElementById('regPass').value;
+        const conf = document.getElementById('regPassConfirm').value;
+        
+        if (!nome || !email || !senha) return showMessage('Preencha todos os campos', 'error', 'regMsg');
+        if (senha !== conf) return showMessage('As senhas não coincidem', 'error', 'regMsg');
+        
+        const { error } = await sb.from('pending').insert([{ nome, email, telefone: tel, negocio: empresa, senha }]);
+        if (error) return showMessage('Erro ao registrar', 'error', 'regMsg');
+        
+        showMessage('✅ Solicitação enviada! Aguarde aprovação do administrador.', 'success', 'regMsg');
+        setTimeout(() => {
+            document.querySelector('#content > div:first-child').style.display = 'block';
+            document.getElementById('regForm').style.display = 'none';
+            document.getElementById('recForm').style.display = 'none';
+        }, 2000);
+    });
+    
+    document.getElementById('doRec')?.addEventListener('click', async () => {
+        const email = document.getElementById('recEmail').value;
+        const nova = document.getElementById('recNewPass').value;
+        const conf = document.getElementById('recConfirmPass').value;
+        
+        if (!email || !nova) return showMessage('Preencha todos os campos', 'error', 'recMsg');
+        if (nova !== conf) return showMessage('As senhas não coincidem', 'error', 'recMsg');
+        
+        if (email === ADMIN_EMAIL) {
+            return showMessage('Contacte o suporte: 954 289 109', 'info', 'recMsg');
+        }
+        
+        const { data: merchant } = await sb.from('merchants').select('email').eq('email', email).single();
+        if (merchant) {
+            await sb.from('merchants').update({ senha: nova }).eq('email', email);
+            showMessage('✅ Senha alterada! Faça login.', 'success', 'recMsg');
+            setTimeout(() => {
+                document.querySelector('#content > div:first-child').style.display = 'block';
+                document.getElementById('regForm').style.display = 'none';
+                document.getElementById('recForm').style.display = 'none';
+            }, 2000);
+        } else {
+            showMessage('Email não encontrado', 'error', 'recMsg');
+        }
+    });
 }
 
 // ==================== MENU ====================
 async function renderMenu() {
     if (!currentUser) return;
     let html = '';
+    
     if (currentUser.isAdmin) {
-        const pendingCount = await getPendingCount();
         const blockedCount = await getBlockedCount();
-        html += `<button data-page="admin"><i class="fas fa-user-check"></i> Aprovar Comerciantes${pendingCount > 0 ? `<span class="badge">${pendingCount}</span>` : ''}</button>`;
+        html += `<button data-page="admin"><i class="fas fa-user-check"></i> Aprovar Solicitações</button>`;
         html += `<button data-page="bloqueados"><i class="fas fa-ban"></i> Bloqueados${blockedCount > 0 ? `<span class="badge">${blockedCount}</span>` : ''}</button>`;
-        html += `<button data-page="dashboard"><i class="fas fa-chart-line"></i> Dashboard Admin</button>`;
+        html += `<button data-page="dashboard"><i class="fas fa-chart-line"></i> Dashboard</button>`;
         html += `<button data-page="relatorios"><i class="fas fa-file-alt"></i> Relatórios</button>`;
-        html += `<button data-page="ia"><i class="fas fa-robot"></i> Assistente IA Kiesse</button>`;
+        html += `<button data-page="ia"><i class="fas fa-robot"></i> IA Kiesse</button>`;
         html += `<button data-page="planos"><i class="fas fa-crown"></i> Planos</button>`;
         html += `<button data-page="config"><i class="fas fa-cog"></i> Configurações</button>`;
     } else {
@@ -699,12 +993,18 @@ async function renderMenu() {
         html += `<button data-page="produtos"><i class="fas fa-boxes"></i> Produtos</button>`;
         html += `<button data-page="contabilidade"><i class="fas fa-chart-pie"></i> Contabilidade</button>`;
         html += `<button data-page="relatorios"><i class="fas fa-file-alt"></i> Relatórios</button>`;
-        html += `<button data-page="ia"><i class="fas fa-robot"></i> Assistente IA Kiesse</button>`;
+        html += `<button data-page="ia"><i class="fas fa-robot"></i> IA Kiesse</button>`;
         html += `<button data-page="planos"><i class="fas fa-crown"></i> Planos</button>`;
         html += `<button data-page="config"><i class="fas fa-cog"></i> Configurações</button>`;
     }
     html += `<button data-page="logout"><i class="fas fa-sign-out-alt"></i> Sair</button>`;
     document.getElementById('nav').innerHTML = html;
+    
+    // Atualizar o contador após renderizar o menu
+    if (currentUser.isAdmin) {
+        await atualizarContadorSolicitacoes();
+    }
+    
     document.querySelectorAll('.sidebar-nav button').forEach(btn => {
         btn.addEventListener('click', () => showPage(btn.dataset.page));
     });
@@ -712,539 +1012,86 @@ async function renderMenu() {
 
 async function showPage(page) {
     if (!currentUser) { showLogin(); return; }
-    closeMenu();
-    if (page === 'dashboard') showDashboard();
-    else if (page === 'faturas') showFaturas();
-    else if (page === 'clientes') showClientes();
-    else if (page === 'produtos') showProdutos();
-    else if (page === 'contabilidade') showContabilidade();
-    else if (page === 'relatorios') showRelatorios();
-    else if (page === 'admin') showAdminPanel();
-    else if (page === 'bloqueados') showBloqueadosPanel();
-    else if (page === 'planos') mostrarPlanos();
-    else if (page === 'ia') showIAAssistente();
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('overlay').classList.remove('active');
+    
+    if (page === 'dashboard') await showDashboard();
+    else if (page === 'faturas') await showFaturas();
+    else if (page === 'clientes') await showClientes();
+    else if (page === 'produtos') await showProdutos();
+    else if (page === 'contabilidade') await showContabilidade();
+    else if (page === 'relatorios') await showRelatorios();
+    else if (page === 'admin') await showAdminPanel();
+    else if (page === 'bloqueados') await showBloqueadosPanel();
+    else if (page === 'planos') await showPlanos();
+    else if (page === 'ia') await showIAAssistente();
     else if (page === 'config') showConfig();
     else if (page === 'logout') logout();
-    document.querySelectorAll('.sidebar-nav button').forEach(btn => {
-        if (btn.dataset.page === page) btn.classList.add('active');
-        else btn.classList.remove('active');
-    });
 }
 
-// ==================== IA ASSISTENTE ====================
-async function showIAAssistente() {
-    const data = await loadMerchantData();
-    const totalVendas = data?.invoices?.filter(i => i.pago).reduce((s,i) => s + i.valor, 0) || 0;
-    let produtosText = 'nenhum';
-    if (data?.products?.length) {
-        produtosText = data.products.map(p => p.nome).join(', ');
-    }
-    
-    document.getElementById('content').innerHTML = `
-        ${showWelcome()}
-        <h2><i class="fas fa-robot"></i> Assistente IA Kiesse</h2>
-        <div class="dashboard-grid" style="grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));">
-            <div class="card">
-                <h3>💡 Sugestão de Preço</h3>
-                <div class="form-group"><input type="text" id="iaProdutoNome" placeholder="Ex: Cadeira de Escritório"></div>
-                <button class="btn-primary" id="btnSugerirPrecoIA">Sugerir Preço</button>
-                <div id="iaResposta" style="margin-top: 15px; padding: 12px; background: var(--bg); border-radius: 12px;"></div>
-            </div>
-            <div class="card">
-                <h3>📊 Análise de Vendas</h3>
-                <p>Vendas: <strong>${totalVendas.toLocaleString()} Kz</strong> | Faturas: ${data?.invoices?.length || 0}</p>
-                <button class="btn-primary" id="btnAnalisarVendasIA">Analisar Vendas</button>
-                <div id="iaAnaliseResposta" style="margin-top: 15px; padding: 12px; background: var(--bg); border-radius: 12px;"></div>
-            </div>
-            <div class="card">
-                <h3>📄 Análise de Documento</h3>
-                <div class="form-group"><textarea id="iaDocumentoTexto" rows="3" placeholder="Cole o texto do alvará, certidão ou contrato..."></textarea></div>
-                <button class="btn-primary" id="btnAnalisarDocumentoIA">Analisar</button>
-                <div id="iaDocumentoResposta" style="margin-top: 15px; padding: 12px; background: var(--bg); border-radius: 12px;"></div>
-            </div>
-            <div class="card">
-                <h3>📈 Relatório IA</h3>
-                <p>Dados disponíveis: ${data?.invoices?.length || 0} faturas, ${data?.products?.length || 0} produtos</p>
-                <button class="btn-primary" id="btnGerarRelatorioIA">Gerar Relatório</button>
-                <div id="iaRelatorioResposta" style="margin-top: 15px; padding: 12px; background: var(--bg); border-radius: 12px;"></div>
-            </div>
-        </div>
-    `;
-    
-    document.getElementById('btnSugerirPrecoIA')?.addEventListener('click', async () => {
-        const produto = document.getElementById('iaProdutoNome').value;
-        if (!produto) { document.getElementById('iaResposta').innerHTML = '<span style="color:var(--warning);">⚠️ Digite o nome do produto</span>'; return; }
-        document.getElementById('iaResposta').innerHTML = '<i class="fas fa-spinner fa-spin"></i> A IA Kiesse está a pensar...';
-        document.getElementById('iaResposta').innerHTML = await sugerirPrecoComIA(produto);
-    });
-    
-    document.getElementById('btnAnalisarVendasIA')?.addEventListener('click', async () => {
-        document.getElementById('iaAnaliseResposta').innerHTML = '<i class="fas fa-spinner fa-spin"></i> A IA Kiesse está a analisar...';
-        document.getElementById('iaAnaliseResposta').innerHTML = await analisarVendasComIA({ totalVendas, numFaturas: data?.invoices?.length || 0 });
-    });
-    
-    document.getElementById('btnAnalisarDocumentoIA')?.addEventListener('click', async () => {
-        const texto = document.getElementById('iaDocumentoTexto').value;
-        if (!texto) { document.getElementById('iaDocumentoResposta').innerHTML = '<span style="color:var(--warning);">⚠️ Cole o texto do documento</span>'; return; }
-        document.getElementById('iaDocumentoResposta').innerHTML = '<i class="fas fa-spinner fa-spin"></i> A IA Kiesse está a analisar...';
-        document.getElementById('iaDocumentoResposta').innerHTML = await analisarDocumentoIA(texto);
-    });
-    
-    document.getElementById('btnGerarRelatorioIA')?.addEventListener('click', async () => {
-        const dados = `Total vendas: ${totalVendas} Kz, Produtos: ${produtosText}, Clientes: ${data?.customers?.length || 0}`;
-        document.getElementById('iaRelatorioResposta').innerHTML = '<i class="fas fa-spinner fa-spin"></i> A IA Kiesse está a gerar...';
-        document.getElementById('iaRelatorioResposta').innerHTML = await gerarRelatorioIA(dados);
-    });
-}
-
-// ==================== DASHBOARD ====================
-async function showDashboard() {
-    const data = await loadMerchantData();
-    const totalVendas = data?.invoices?.filter(i => i.pago).reduce((s,i) => s + i.valor, 0) || 0;
-    const totalClientes = data?.customers?.length || 0;
-    document.getElementById('content').innerHTML = `
-        ${showWelcome()}
-        <h2><i class="fas fa-chart-line"></i> Dashboard</h2>
-        <div class="dashboard-grid">
-            <div class="card"><h3>VENDAS</h3><div class="value">${totalVendas.toLocaleString()} Kz</div></div>
-            <div class="card"><h3>CLIENTES</h3><div class="value">${totalClientes}</div></div>
-            <div class="card"><h3>PRODUTOS</h3><div class="value">${data?.products?.length || 0}</div></div>
-        </div>
-    `;
-    mostrarSaudacaoDiaria();
-}
-
-// ==================== FATURAS ====================
-async function showFaturas() {
-    const data = await loadMerchantData();
-    let html = `
-        ${showWelcome()}
-        <h2><i class="fas fa-file-invoice-dollar"></i> Faturas</h2>
-        <button class="btn-primary" onclick="window.novaFatura()"><i class="fas fa-plus"></i> Nova Fatura</button>
-        <button class="btn-secondary" id="btnIAAnaliseFaturas"><i class="fas fa-robot"></i> IA: Analisar Faturas</button>
-        <div class="table-wrapper">
-            <table>
-                <thead><tr><th>Cliente</th><th>Valor</th><th>Data</th><th>Status</th><th>Ações</th></tr></thead>
-                <tbody>
-    `;
-    if (data?.invoices && data.invoices.length > 0) {
-        for (const inv of data.invoices) {
-            html += `<tr>
-                <td>${inv.cliente}</td>
-                <td>${inv.valor.toLocaleString()} Kz</td>
-                <td>${inv.data}</td>
-                <td><span style="background:${inv.pago ? '#c8e6c9' : '#ffecb3'}; padding:4px 8px; border-radius:20px;">${inv.pago ? 'Pago' : 'Pendente'}</span></td>
-                <td>
-                    <button class="btn-primary" onclick="window.togglePagoFatura('${inv.id}', ${!inv.pago})">${inv.pago ? 'Pendente' : 'Pago'}</button>
-                    <button class="btn-danger" onclick="window.deleteFatura('${inv.id}')">Excluir</button>
-                </td>
-            </tr>`;
-        }
-    } else {
-        html += `<tr><td colspan="5">Nenhuma fatura</td></tr>`;
-    }
-    html += `</tbody></table></div><div id="iaFaturasResposta" style="margin-top: 15px;"></div>`;
-    document.getElementById('content').innerHTML = html;
-    document.getElementById('btnIAAnaliseFaturas')?.addEventListener('click', async () => {
-        const totalVendas = data?.invoices?.filter(i => i.pago).reduce((s,i) => s + i.valor, 0) || 0;
-        document.getElementById('iaFaturasResposta').innerHTML = '<i class="fas fa-spinner fa-spin"></i> IA a analisar...';
-        document.getElementById('iaFaturasResposta').innerHTML = await analisarVendasComIA({ totalVendas, numFaturas: data?.invoices?.length || 0 });
-    });
-}
-
-window.novaFatura = () => {
-    document.getElementById('content').innerHTML = `
-        <h2>➕ Nova Fatura</h2>
-        <div style="max-width: 400px;">
-            <div class="form-group"><label>Cliente</label><input id="fatCliente"></div>
-            <div class="form-group"><label>Valor (Kz)</label><input id="fatValor" type="number"></div>
-            <div class="form-group"><label>Data</label><input id="fatData" type="date" value="${new Date().toISOString().split('T')[0]}"></div>
-            <button class="btn-primary" onclick="window.salvarFatura()">Salvar</button>
-            <button class="btn-secondary" onclick="showFaturas()">Cancelar</button>
-        </div>
-    `;
-};
-
-window.salvarFatura = async () => {
-    const cliente = document.getElementById('fatCliente').value, valor = parseFloat(document.getElementById('fatValor').value), data = document.getElementById('fatData').value;
-    if (!cliente || !valor) return alert('Preencha os dados');
-    await supabaseClient.from('invoices').insert([{ merchant_id: currentMerchantId, cliente, valor, data, pago: false }]);
-    showFaturas();
-};
-
-window.togglePagoFatura = async (id, pago) => { await supabaseClient.from('invoices').update({ pago }).eq('id', id); showFaturas(); };
-window.deleteFatura = async (id) => { if (confirm('Tem certeza?')) await supabaseClient.from('invoices').delete().eq('id', id); showFaturas(); };
-
-// ==================== CLIENTES ====================
-async function showClientes() {
-    const data = await loadMerchantData();
-    let html = `
-        ${showWelcome()}
-        <h2><i class="fas fa-users"></i> Clientes</h2>
-        <button class="btn-primary" onclick="window.novoCliente()"><i class="fas fa-plus"></i> Novo Cliente</button>
-        <button class="btn-secondary" id="btnIAAnaliseClientes"><i class="fas fa-robot"></i> IA: Analisar Clientes</button>
-        <div class="table-wrapper">
-            <table>
-                <thead><tr><th>Nome</th><th>Email</th><th>Telefone</th><th>Ações</th></tr></thead>
-                <tbody>
-    `;
-    if (data?.customers && data.customers.length > 0) {
-        for (const c of data.customers) {
-            html += `<tr>
-                <td>${c.nome}</td>
-                <td>${c.email || '-'}</td>
-                <td>${c.telefone || '-'}</td>
-                <td><button class="btn-danger" onclick="window.deleteCliente('${c.id}')">Excluir</button></td>
-            </tr>`;
-        }
-    } else {
-        html += `<tr><td colspan="4">Nenhum cliente</td></tr>`;
-    }
-    html += `</tbody></table></div><div id="iaClientesResposta" style="margin-top: 15px;"></div>`;
-    document.getElementById('content').innerHTML = html;
-    document.getElementById('btnIAAnaliseClientes')?.addEventListener('click', async () => {
-        const clientesStr = data?.customers?.map(c => c.nome).join(', ') || 'nenhum cliente';
-        document.getElementById('iaClientesResposta').innerHTML = '<i class="fas fa-spinner fa-spin"></i> IA a analisar...';
-        document.getElementById('iaClientesResposta').innerHTML = await analisarClienteIA(clientesStr);
-    });
-}
-
-window.novoCliente = () => {
-    document.getElementById('content').innerHTML = `<h2>➕ Novo Cliente</h2><div style="max-width:400px;"><div class="form-group"><label>Nome</label><input id="cliNome"></div>
-    <div class="form-group"><label>Email</label><input id="cliEmail"></div><div class="form-group"><label>Telefone</label><input id="cliTel"></div>
-    <button class="btn-primary" onclick="window.salvarCliente()">Salvar</button><button class="btn-secondary" onclick="showClientes()">Cancelar</button></div>`;
-};
-window.salvarCliente = async () => {
-    const nome = document.getElementById('cliNome').value, email = document.getElementById('cliEmail').value, tel = document.getElementById('cliTel').value;
-    if (!nome) return alert('Nome obrigatório');
-    await supabaseClient.from('customers').insert([{ merchant_id: currentMerchantId, nome, email, telefone: tel }]);
-    showClientes();
-};
-window.deleteCliente = async (id) => { if (confirm('Tem certeza?')) await supabaseClient.from('customers').delete().eq('id', id); showClientes(); };
-
-// ==================== PRODUTOS ====================
-async function showProdutos() {
-    const data = await loadMerchantData();
-    let html = `
-        ${showWelcome()}
-        <h2><i class="fas fa-boxes"></i> Produtos</h2>
-        <button class="btn-primary" onclick="window.addProduto()"><i class="fas fa-plus"></i> Adicionar</button>
-        <button class="btn-secondary" id="btnIAPrecoProdutos"><i class="fas fa-robot"></i> IA: Sugerir Preços</button>
-        <div class="table-wrapper">
-            <table>
-                <thead><tr><th>Produto</th><th>Preço (Kz)</th><th>Ações</th></tr></thead>
-                <tbody>
-    `;
-    if (data?.products && data.products.length > 0) {
-        for (const p of data.products) {
-            html += `<tr>
-                <td>${p.nome}</td>
-                <td>${p.preco.toLocaleString()} Kz</td>
-                <td><button class="btn-danger" onclick="window.deleteProduto('${p.id}')">Excluir</button></td>
-            </tr>`;
-        }
-    } else {
-        html += `<tr><td colspan="3">Nenhum produto</td></tr>`;
-    }
-    html += `</tbody></table></div><div id="iaProdutosResposta" style="margin-top: 15px;"></div>`;
-    document.getElementById('content').innerHTML = html;
-    document.getElementById('btnIAPrecoProdutos')?.addEventListener('click', async () => {
-        if (!data?.products?.length) { document.getElementById('iaProdutosResposta').innerHTML = '<span style="color:var(--warning);">⚠️ Nenhum produto cadastrado</span>'; return; }
-        document.getElementById('iaProdutosResposta').innerHTML = '<i class="fas fa-spinner fa-spin"></i> IA a sugerir...';
-        document.getElementById('iaProdutosResposta').innerHTML = await sugerirPrecoComIA(data.products[0].nome);
-    });
-}
-
-window.addProduto = () => {
-    document.getElementById('content').innerHTML = `<h2>➕ Novo Produto</h2><div style="max-width:400px;"><div class="form-group"><label>Produto</label><input id="prodNome"></div>
-    <div class="form-group"><label>Preço (Kz)</label><input id="prodPreco" type="number"></div>
-    <button class="btn-primary" onclick="window.salvarProduto()">Salvar</button><button class="btn-secondary" onclick="showProdutos()">Cancelar</button></div>`;
-};
-window.salvarProduto = async () => {
-    const nome = document.getElementById('prodNome').value, preco = parseFloat(document.getElementById('prodPreco').value);
-    if (!nome) return alert('Nome obrigatório');
-    await supabaseClient.from('products').insert([{ merchant_id: currentMerchantId, nome, preco }]);
-    showProdutos();
-};
-window.deleteProduto = async (id) => { if (confirm('Tem certeza?')) await supabaseClient.from('products').delete().eq('id', id); showProdutos(); };
-
-// ==================== CONTABILIDADE ====================
-async function showContabilidade() {
-    const data = await loadMerchantData();
-    const receitas = data?.invoices?.filter(i => i.pago).reduce((s,i) => s + i.valor, 0) || 0;
-    document.getElementById('content').innerHTML = `
-        ${showWelcome()}
-        <h2><i class="fas fa-chart-pie"></i> Contabilidade</h2>
-        <div class="dashboard-grid">
-            <div class="card"><h3>RECEITAS</h3><div class="value">${receitas.toLocaleString()} Kz</div></div>
-            <div class="card"><h3>DESPESAS</h3><div class="value">${(receitas * 0.42).toLocaleString()} Kz</div></div>
-            <div class="card"><h3>MARGEM</h3><div class="value">${receitas > 0 ? 58 : 0}%</div></div>
-        </div>
-        <button class="btn-secondary" id="btnIAAnaliseContabilidade"><i class="fas fa-robot"></i> IA: Analisar Finanças</button>
-        <div id="iaContabilidadeResposta" style="margin-top: 15px;"></div>
-    `;
-    document.getElementById('btnIAAnaliseContabilidade')?.addEventListener('click', async () => {
-        document.getElementById('iaContabilidadeResposta').innerHTML = '<i class="fas fa-spinner fa-spin"></i> IA a analisar...';
-        document.getElementById('iaContabilidadeResposta').innerHTML = await analisarVendasComIA({ totalVendas: receitas, numFaturas: data?.invoices?.length || 0 });
-    });
-}
-
-// ==================== RELATÓRIOS ====================
-async function showRelatorios() {
-    const data = await loadMerchantData();
-    document.getElementById('content').innerHTML = `
-        ${showWelcome()}
-        <h2><i class="fas fa-file-alt"></i> Relatórios</h2>
-        <div class="card"><h3>Resumo</h3><p>Faturas: ${data?.invoices?.length || 0}<br>Vendas: ${data?.invoices?.filter(i => i.pago).reduce((s,i) => s + i.valor, 0).toLocaleString()} Kz<br>Clientes: ${data?.customers?.length || 0}<br>Produtos: ${data?.products?.length || 0}</p></div>
-        <button class="btn-primary" id="btnIAExportar"><i class="fas fa-robot"></i> IA: Gerar Relatório Executivo</button>
-        <div id="iaRelatorioResposta" style="margin-top: 15px;"></div>
-    `;
-    document.getElementById('btnIAExportar')?.addEventListener('click', async () => {
-        const dados = `Total vendas: ${data?.invoices?.filter(i => i.pago).reduce((s,i) => s + i.valor, 0) || 0} Kz, Clientes: ${data?.customers?.length || 0}, Produtos: ${data?.products?.length || 0}`;
-        document.getElementById('iaRelatorioResposta').innerHTML = '<i class="fas fa-spinner fa-spin"></i> IA a gerar...';
-        document.getElementById('iaRelatorioResposta').innerHTML = await gerarRelatorioIA(dados);
-    });
-}
-
-// ==================== ADMIN PANEL ====================
-async function showAdminPanel() {
-    if (!currentUser?.isAdmin) return;
-    const { data: pendingData } = await supabaseClient.from('pending').select('*');
-    let html = `
-        ${showWelcome()}
-        <h2><i class="fas fa-user-check"></i> Gestão de Comerciantes</h2>
-        <div id="adminMsg"></div>
-        <div class="table-wrapper">
-            <table>
-                <thead><tr><th>Nome</th><th>Email</th><th>Empresa</th><th>Ações</th></tr></thead>
-                <tbody>
-    `;
-    if (pendingData && pendingData.length > 0) {
-        for (const p of pendingData) {
-            html += `<tr>
-                <td>${p.nome}</td>
-                <td>${p.email} / ${p.telefone || '-'}</td>
-                <td>${p.negocio || '-'}</td>
-                <td><button class="btn-primary" onclick="window.approveUser('${p.email}')">Aprovar</button> <button class="btn-danger" onclick="window.rejectUser('${p.email}')">Rejeitar</button></td>
-            </tr>`;
-        }
-    } else {
-        html += `<tr><td colspan="4">Nenhuma solicitação</td></tr>`;
-    }
-    html += `</tbody></table></div>
-        <button class="btn-secondary" id="btnIAAdmin"><i class="fas fa-robot"></i> IA: Analisar Solicitações</button>
-        <div id="iaAdminResposta" style="margin-top: 15px;"></div>
-    `;
-    document.getElementById('content').innerHTML = html;
-    document.getElementById('btnIAAdmin')?.addEventListener('click', async () => {
-        const stats = `${pendingData?.length || 0} solicitações pendentes, ${await getMerchantsCount()} comerciantes ativos, ${await getBlockedCount()} bloqueados`;
-        document.getElementById('iaAdminResposta').innerHTML = '<i class="fas fa-spinner fa-spin"></i> IA a analisar...';
-        document.getElementById('iaAdminResposta').innerHTML = await chamarGemini(`Analise estes dados administrativos: ${stats}. Dê sugestões para melhorar a gestão.`);
-    });
-}
-
-window.approveUser = async (email) => {
-    const { data: pendingUser } = await supabaseClient.from('pending').select('*').eq('email', email).single();
-    if (pendingUser) {
-        await supabaseClient.from('merchants').insert([{ ...pendingUser, aprovado: true }]);
-        await supabaseClient.from('pending').delete().eq('email', email);
-        showAdminPanel();
-        showMessage('✅ Comerciante aprovado!', 'success', 'adminMsg');
-    }
-};
-
-window.rejectUser = async (email) => {
-    await supabaseClient.from('pending').delete().eq('email', email);
-    showAdminPanel();
-    showMessage('❌ Comerciante rejeitado.', 'warning', 'adminMsg');
-};
-
-// ==================== BLOQUEADOS ====================
-async function showBloqueadosPanel() {
-    const { data: blocked } = await supabaseClient.from('blocked_merchants').select('*, merchants(nome, email, telefone, negocio)').eq('ativo', true);
-    let html = `
-        ${showWelcome()}
-        <h2><i class="fas fa-ban"></i> Comerciantes Bloqueados</h2>
-        <div class="table-wrapper">
-            <table>
-                <thead><tr><th>Nome</th><th>Email</th><th>Motivo</th><th>Data</th><th>Ações</th></tr></thead>
-                <tbody>
-    `;
-    if (blocked && blocked.length > 0) {
-        for (const b of blocked) {
-            html += `<tr>
-                <td>${b.merchants?.nome || '-'}</td>
-                <td>${b.merchants?.email || '-'}</td>
-                <td>${b.motivo}</td>
-                <td>${new Date(b.data_bloqueio).toLocaleDateString()}</td>
-                <td><button class="btn-primary" onclick="window.unblockMerchant('${b.id}')">Desbloquear</button></td>
-            </tr>`;
-        }
-    } else {
-        html += `<tr><td colspan="5">Nenhum bloqueado</td></tr>`;
-    }
-    html += `</tbody></table></div>`;
-    document.getElementById('content').innerHTML = html;
-}
-
-window.unblockMerchant = async (id) => {
-    await supabaseClient.from('blocked_merchants').update({ ativo: false, data_desbloqueio: new Date().toISOString() }).eq('id', id);
-    showBloqueadosPanel();
-};
-
-// ==================== PLANOS ====================
-async function mostrarPlanos() {
-    document.getElementById('content').innerHTML = `
-        ${showWelcome()}
-        <h2><i class="fas fa-crown"></i> Planos</h2>
-        <div class="dashboard-grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
-            <div class="card"><h3>Básico</h3><div class="value">5.000 Kz/mês</div><ul><li><i class="fas fa-check"></i> Faturas</li><li><i class="fas fa-times"></i> IA</li><li>Offline: 48h</li></ul>
-            <button class="btn-primary" onclick="window.assinarPlano('basico')">Assinar</button></div>
-            <div class="card" style="border:2px solid var(--gold);"><h3>Premium ⭐</h3><div class="value">12.000 Kz/mês</div><ul><li><i class="fas fa-check"></i> Tudo do Básico</li><li><i class="fas fa-robot"></i> IA Completa</li><li>Offline: 72h</li></ul>
-            <button class="btn-primary" onclick="window.assinarPlano('premium')">Assinar</button></div>
-            <div class="card"><h3>Max</h3><div class="value">20.000 Kz/mês</div><ul><li><i class="fas fa-check"></i> Tudo do Premium</li><li><i class="fas fa-chart-line"></i> Análise Avançada</li><li>Offline: 7 dias</li></ul>
-            <button class="btn-primary" onclick="window.assinarPlano('max')">Assinar</button></div>
-        </div>
-    `;
-}
-
-window.assinarPlano = async (plano) => {
-    await supabaseClient.from('assinaturas').update({ ativo: false }).eq('merchant_id', currentMerchantId).eq('ativo', true);
-    await supabaseClient.from('assinaturas').insert([{ merchant_id: currentMerchantId, plano, data_inicio: new Date().toISOString().split('T')[0], data_fim: new Date(Date.now() + 30*24*60*60*1000).toISOString().split('T')[0], ativo: true }]);
-    currentPlano = plano;
-    showMessage(`✅ Plano ${plano.toUpperCase()} assinado!`, 'success');
-    showDashboard();
-};
-
-// ==================== CONFIGURAÇÕES ====================
-function showConfig() {
-    document.getElementById('content').innerHTML = `
-        ${showWelcome()}
-        <h2><i class="fas fa-cog"></i> Configurações</h2>
-        <div style="max-width: 400px;"><h3>Alterar Senha</h3><div id="configMsg"></div>
-        <div class="form-group"><label>Senha Atual</label><input type="password" id="oldPass"></div>
-        <div class="form-group"><label>Nova Senha</label><input type="password" id="newPass"></div>
-        <div class="form-group"><label>Confirmar</label><input type="password" id="confirmPass"></div>
-        <button class="btn-primary" id="changePassBtn">Alterar Senha</button></div>
-        <hr style="margin:20px 0">
-        <div style="max-width: 400px;"><h3>Saudação Diária</h3>
-        <label><input type="checkbox" id="desativarSaudacao" ${saudacaoDesativada ? 'checked' : ''}> Desativar saudação da IA Kiesse</label>
-        <button class="btn-secondary" id="salvarSaudacaoBtn">Salvar</button></div>
-    `;
-    document.getElementById('changePassBtn')?.addEventListener('click', async () => {
-        const oldPass = document.getElementById('oldPass').value, newPass = document.getElementById('newPass').value, confirm = document.getElementById('confirmPass').value;
-        if (!oldPass || !newPass) return showMessage('Preencha todos os campos', 'error', 'configMsg');
-        if (newPass !== confirm) return showMessage('As senhas não coincidem', 'error', 'configMsg');
-        if (currentUser.isAdmin) {
-            if (oldPass === ADMIN_PASS) { showMessage('✅ Senha alterada!', 'success', 'configMsg'); setTimeout(() => logout(), 2000); }
-            else showMessage('Senha atual incorreta', 'error', 'configMsg');
-        } else {
-            const { data: merchant } = await supabaseClient.from('merchants').select('senha').eq('email', currentUser.email).single();
-            if (merchant && merchant.senha === oldPass) {
-                await supabaseClient.from('merchants').update({ senha: newPass }).eq('email', currentUser.email);
-                showMessage('✅ Senha alterada! Faça login novamente.', 'success', 'configMsg');
-                setTimeout(() => logout(), 2000);
-            } else showMessage('Senha atual incorreta', 'error', 'configMsg');
-        }
-    });
-    document.getElementById('salvarSaudacaoBtn')?.addEventListener('click', () => {
-        saudacaoDesativada = document.getElementById('desativarSaudacao').checked;
-        localStorage.setItem(`saudacao_desativada_${currentUser.email}`, saudacaoDesativada);
-        showMessage('✅ Preferência salva!', 'success', 'configMsg');
-    });
-}
-
-// ==================== LOGIN ====================
-function showLogin() {
+function logout() {
+    currentUser = null;
+    currentMerchantId = null;
+    currentPlano = null;
+    localStorage.removeItem('vgest_user');
     document.getElementById('headerActions').style.display = 'none';
-    document.getElementById('content').innerHTML = `
-        <div style="max-width: 400px; margin: 50px auto;">
-            <h2><i class="fas fa-lock"></i> Entrar no V-Gest</h2>
-            <div id="loginMsg"></div>
-            <div class="form-group"><label>Email ou Telefone</label><input type="text" id="loginUser" placeholder="email@exemplo.com ou 923456789"></div>
-            <div class="form-group"><label>Senha</label><input type="password" id="loginPass"></div>
-            <button class="btn-primary" id="doLogin" style="width:100%">Entrar</button>
-            <p style="margin-top: 16px; text-align:center;"><a href="#" id="showReg">📝 Criar conta grátis</a></p>
-        </div>
-        <div id="regForm" style="display:none; max-width:400px; margin:20px auto;">
-            <h2>📝 Criar Conta</h2>
-            <div id="regMsg"></div>
-            <div class="form-group"><label>Nome completo</label><input type="text" id="regNome"></div>
-            <div class="form-group"><label>Email</label><input type="email" id="regEmail"></div>
-            <div class="form-group"><label>Telefone</label><input type="tel" id="regTel"></div>
-            <div class="form-group"><label>Nome da empresa</label><input type="text" id="regEmpresa"></div>
-            <div class="form-group"><label>Senha</label><input type="password" id="regPass"></div>
-            <div class="form-group"><label>Confirmar Senha</label><input type="password" id="regPassConfirm"></div>
-            <button class="btn-primary" id="doReg" style="width:100%">Registrar</button>
-            <p><a href="#" id="backLogin">← Voltar</a></p>
-        </div>
-    `;
-
-    document.getElementById('doLogin')?.addEventListener('click', async () => {
-        const userInput = document.getElementById('loginUser').value, pass = document.getElementById('loginPass').value;
-        if (userInput === ADMIN_EMAIL && pass === ADMIN_PASS) {
-            currentUser = { email: ADMIN_EMAIL, isAdmin: true, name: 'Administrador' };
-            localStorage.setItem('currentUser', JSON.stringify(currentUser));
-            document.getElementById('headerActions').style.display = 'flex';
-            document.body.classList.add('admin-theme');
-            await renderMenu();
-            showDashboard();
-            return;
-        }
-        let { data: merchant } = await supabaseClient.from('merchants').select('*').eq('email', userInput).eq('senha', pass).single();
-        if (!merchant) {
-            const { data: merchantByPhone } = await supabaseClient.from('merchants').select('*').eq('telefone', userInput).eq('senha', pass).single();
-            merchant = merchantByPhone;
-        }
-        if (merchant && merchant.aprovado) {
-            currentUser = { email: merchant.email, name: merchant.nome, isAdmin: false, empresa: merchant.negocio };
-            localStorage.setItem('currentUser', JSON.stringify(currentUser));
-            document.getElementById('headerActions').style.display = 'flex';
-            await renderMenu();
-            const assinatura = await getAssinatura();
-            currentPlano = assinatura?.plano || 'basico';
-            saudacaoDesativada = localStorage.getItem(`saudacao_desativada_${currentUser.email}`) === 'true';
-            mostrarIAKiesse();
-            showDashboard();
-            return;
-        }
-        const { data: pendingUser } = await supabaseClient.from('pending').select('*').eq('email', userInput).single();
-        if (pendingUser) document.getElementById('loginMsg').innerHTML = '<div class="alert alert-warning">⏳ Aguardando aprovação.</div>';
-        else document.getElementById('loginMsg').innerHTML = '<div class="alert alert-error">❌ Credenciais inválidas</div>';
-    });
-
-    document.getElementById('showReg')?.addEventListener('click', (e) => { e.preventDefault(); document.getElementById('loginMsg').parentElement.style.display = 'none'; document.getElementById('regForm').style.display = 'block'; });
-    document.getElementById('backLogin')?.addEventListener('click', (e) => { e.preventDefault(); document.getElementById('loginMsg').parentElement.style.display = 'block'; document.getElementById('regForm').style.display = 'none'; });
-    document.getElementById('doReg')?.addEventListener('click', async () => {
-        const nome = document.getElementById('regNome').value, email = document.getElementById('regEmail').value, tel = document.getElementById('regTel').value, empresa = document.getElementById('regEmpresa').value, senha = document.getElementById('regPass').value, confirm = document.getElementById('regPassConfirm').value;
-        if (!nome || !email || !senha) return showMessage('Preencha todos os campos', 'error', 'regMsg');
-        if (senha !== confirm) return showMessage('As senhas não coincidem', 'error', 'regMsg');
-        const { error } = await supabaseClient.from('pending').insert([{ nome, email, telefone: tel, negocio: empresa, senha }]);
-        if (error) return showMessage('Erro ao registrar', 'error', 'regMsg');
-        showMessage('✅ Cadastro realizado! Aguarde aprovação.', 'success', 'regMsg');
-        setTimeout(() => { document.getElementById('loginMsg').parentElement.style.display = 'block'; document.getElementById('regForm').style.display = 'none'; }, 2000);
-    });
+    document.getElementById('downloadAppBtn').style.display = 'none';
+    showLogin();
 }
 
-document.getElementById('menuBtn').addEventListener('click', () => { if (sidebar.classList.contains('open')) closeMenu(); else openMenu(); });
-document.getElementById('overlay').addEventListener('click', closeMenu);
-document.getElementById('darkBtn').addEventListener('click', () => { document.body.classList.toggle('dark'); localStorage.setItem('dark', document.body.classList.contains('dark') ? 'dark' : ''); });
-document.getElementById('helpBtn').addEventListener('click', () => alert("📘 V-Gest v18.0 | IA Kiesse\n\nADMIN: admin@v-gest.ao / admin123\n- Aprovar comerciantes\n- IA para análise de solicitações\n\nCLIENTE:\n- Gerir faturas, clientes, produtos\n- IA Kiesse disponível nos planos Premium e Max\n- Planos: Básico, Premium, Max\n\nSuporte: WhatsApp 954 289 109"));
+function updateClock() {
+    const now = new Date();
+    const dias = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+    document.getElementById('clock').innerHTML = `${dias[now.getDay()]}, ${now.toLocaleDateString('pt-PT')} - ${now.toLocaleTimeString('pt-PT', { hour:'2-digit', minute:'2-digit' })}`;
+}
+setInterval(updateClock, 1000);
+updateClock();
 
-if (localStorage.getItem('dark') === 'dark') document.body.classList.add('dark');
-const saved = localStorage.getItem('currentUser');
-if (saved) { 
-    currentUser = JSON.parse(saved);
+// ========== EVENTOS ==========
+document.getElementById('menuBtn').addEventListener('click', () => {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('overlay');
+    if (sidebar.classList.contains('open')) {
+        sidebar.classList.remove('open');
+        overlay.classList.remove('active');
+    } else {
+        sidebar.classList.add('open');
+        overlay.classList.add('active');
+    }
+});
+document.getElementById('overlay').addEventListener('click', () => {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('overlay').classList.remove('active');
+});
+document.getElementById('darkBtn').addEventListener('click', () => {
+    document.body.classList.toggle('dark');
+    localStorage.setItem('vgest_dark', document.body.classList.contains('dark'));
+});
+document.getElementById('helpBtn').addEventListener('click', () => {
+    alert("📘 V-Gest v20.0 | IA Kiesse\n\nADMIN: admin@v-gest.ao / admin123\n- Aprovar comerciantes (com contador vermelho)\n- Gerir bloqueados\n\nCLIENTE:\n- Gerir faturas, clientes, produtos\n- IA Kiesse nos planos Premium e Max\n\nSuporte WhatsApp: 954 289 109");
+});
+
+// ========== INICIALIZAÇÃO ==========
+if (localStorage.getItem('vgest_dark') === 'true') document.body.classList.add('dark');
+const savedUser = localStorage.getItem('vgest_user');
+if (savedUser) {
+    currentUser = JSON.parse(savedUser);
     document.getElementById('headerActions').style.display = 'flex';
+    document.getElementById('downloadAppBtn').style.display = 'flex';
+    if (currentUser.isAdmin) document.body.classList.add('admin-theme');
     renderMenu().then(async () => {
         if (!currentUser.isAdmin) {
             const assinatura = await getAssinatura();
             currentPlano = assinatura?.plano || 'basico';
             saudacaoDesativada = localStorage.getItem(`saudacao_desativada_${currentUser.email}`) === 'true';
+        } else {
+            iniciarMonitorizacaoSolicitacoes();
         }
         showDashboard();
     });
-} else showLogin();
+} else {
+    showLogin();
+}
 </script>
 </body>
 </html>
