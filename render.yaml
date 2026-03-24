@@ -1,7 +1,7 @@
 services:
   - type: web
     name: whatsapp-kiesse-bot
-    env: node
+    runtime: node
     buildCommand: npm install
     startCommand: npm start
     envVars:
@@ -9,5 +9,3 @@ services:
         sync: false
       - key: PORT
         value: 3000
-    buildpacks:
-      - https://github.com/jontewks/puppeteer-heroku-buildpack.git
